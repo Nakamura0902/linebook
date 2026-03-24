@@ -69,11 +69,13 @@ async def login(req: LoginRequest, request: Request, db: Session = Depends(get_d
 
 
 @router.get("/me")
-async def get_me(admin: AdminUser = Depends(get_current_admin)):
+async def get_me(admin: AdminUser = Depends(get_current_admin), db: Session = Depends(get_db)):
+    store_ids = [a.store_id for a in admin.store_access] if admin.store_access else []
     return {
         "id": admin.id,
         "email": admin.email,
         "name": admin.name,
         "role": admin.role,
         "tenant_id": admin.tenant_id,
+        "store_ids": store_ids,
     }

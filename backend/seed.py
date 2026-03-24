@@ -30,19 +30,25 @@ def seed():
 
         print("Seeding initial data...")
 
-        # テナント作成
-        tenant = Tenant(name="サンプル美容室チェーン", slug="sample-salon")
+        # テナント作成（固定ID）
+        tenant = Tenant(
+            id="dcbc4ca3-baef-42e6-9742-b865ea99ea7a",
+            name="サンプル美容室チェーン",
+            slug="sample-salon",
+        )
         db.add(tenant)
         db.flush()
 
-        # 店舗作成
+        # 店舗作成（固定ID）
         store = Store(
+            id="84a402b7-ba98-4f71-83da-5452247b835b",
             tenant_id=tenant.id,
             name="サンプル美容室 渋谷店",
             slug="shibuya",
             industry_type="beauty_salon",
             phone="03-1234-5678",
             address="東京都渋谷区○○ 1-2-3",
+            line_channel_secret="ab23ccddbcfc223799e93dc1d3a9c805",
         )
         db.add(store)
         db.flush()
