@@ -1,41 +1,49 @@
 :root {
   --line-green: #06c755;
-  --line-green-dark: #05b04c;
+  --line-green-dark: #05a847;
+  --line-green-light: #e8faf0;
+  --header-gradient: linear-gradient(135deg, #06c755 0%, #00b341 100%);
 }
 
 body {
   max-width: 480px;
   margin: 0 auto;
-  background: #f0f0f0;
+  background: #f5f7fa;
   min-height: 100vh;
 }
 
+/* ─── ヘッダー ─── */
 .liff-header {
-  background: var(--line-green);
+  background: var(--header-gradient);
   color: #fff;
-  padding: 16px;
+  padding: 18px 16px;
   text-align: center;
-  font-size: 16px;
+  font-size: 17px;
   font-weight: 700;
   position: sticky;
   top: 0;
   z-index: 100;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 12px rgba(6, 199, 85, 0.3);
 }
 
 .liff-content {
   padding: 16px;
+  padding-bottom: 88px;
 }
 
-/* プログレスバー */
+/* ─── プログレスバー ─── */
 .progress-bar {
   display: flex;
   justify-content: space-between;
-  padding: 12px 16px;
+  align-items: flex-start;
+  padding: 14px 8px 10px;
   background: #fff;
-  border-bottom: 1px solid var(--gray-200);
+  border-bottom: 1px solid #eef0f3;
   position: sticky;
-  top: 56px;
+  top: 57px;
   z-index: 99;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
 }
 
 .progress-step {
@@ -43,91 +51,205 @@ body {
   flex-direction: column;
   align-items: center;
   flex: 1;
-  font-size: 11px;
-  color: var(--gray-400);
+  font-size: 10px;
+  color: #adb5bd;
+  position: relative;
+}
+
+.progress-step:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  top: 13px;
+  left: calc(50% + 13px);
+  width: calc(100% - 26px);
+  height: 2px;
+  background: #e9ecef;
+  transition: background 0.3s;
+}
+
+.progress-step.done:not(:last-child)::after {
+  background: var(--line-green);
 }
 
 .progress-step .circle {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border-radius: 50%;
-  background: var(--gray-200);
+  background: #e9ecef;
   display: flex;
   align-items: center;
   justify-content: center;
   font-size: 12px;
   font-weight: 700;
-  margin-bottom: 4px;
+  margin-bottom: 5px;
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+  color: #adb5bd;
 }
 
-.progress-step.active .circle,
+.progress-step.active .circle {
+  background: var(--line-green);
+  color: #fff;
+  box-shadow: 0 0 0 5px rgba(6, 199, 85, 0.18);
+  transform: scale(1.18);
+}
+
 .progress-step.done .circle {
   background: var(--line-green);
   color: #fff;
+  font-size: 0;
+}
+
+.progress-step.done .circle::after {
+  content: '✓';
+  font-size: 13px;
 }
 
 .progress-step.active {
-  color: var(--gray-700);
+  color: #1a1a2e;
+  font-weight: 600;
 }
 
-/* カード選択 */
+/* ─── セクションタイトル ─── */
+.step-title {
+  font-size: 15px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  color: #1a1a2e;
+}
+
+/* ─── カテゴリラベル ─── */
+.category-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #868e96;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin: 16px 0 8px 2px;
+}
+
+/* ─── カード選択 ─── */
 .select-card {
   background: #fff;
-  border: 2px solid var(--gray-200);
-  border-radius: var(--radius);
-  padding: 14px;
-  margin-bottom: 8px;
+  border: 2px solid #eef0f3;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 10px;
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
 }
 
-.select-card:hover, .select-card.selected {
-  border-color: var(--line-green);
+.select-card:active {
+  transform: scale(0.98);
 }
 
 .select-card.selected {
-  background: #f0fff4;
+  border-color: var(--line-green);
+  background: var(--line-green-light);
+  box-shadow: 0 4px 16px rgba(6, 199, 85, 0.15);
 }
 
-.select-card .card-title { font-weight: 600; margin-bottom: 2px; }
-.select-card .card-sub { font-size: 12px; color: var(--gray-500); }
+.select-card .card-title {
+  font-weight: 600;
+  font-size: 15px;
+  margin-bottom: 4px;
+  color: #1a1a2e;
+}
 
-/* カレンダー */
+.select-card .card-sub {
+  font-size: 12px;
+  color: #868e96;
+}
+
+.select-card.selected .card-title {
+  color: var(--line-green-dark);
+}
+
+/* スタッフカード内画像 */
+.staff-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  object-fit: cover;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.select-card .card-inner {
+  display: flex;
+  align-items: center;
+}
+
+/* ─── カレンダー ─── */
 .month-nav {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
+  padding: 0 2px;
+}
+
+.month-nav strong {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1a1a2e;
 }
 
 .cal-grid {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
+  gap: 2px;
   text-align: center;
 }
 
 .cal-day-header {
   font-size: 11px;
-  color: var(--gray-500);
-  padding: 4px;
+  font-weight: 700;
+  padding: 6px 0;
 }
 
+.cal-day-header:nth-child(1) { color: #ef4444; }
+.cal-day-header:nth-child(7) { color: #3b82f6; }
+.cal-day-header:not(:nth-child(1)):not(:nth-child(7)) { color: #868e96; }
+
 .cal-day {
-  padding: 6px 4px;
-  border-radius: 6px;
+  aspect-ratio: 1;
+  border-radius: 50%;
   font-size: 13px;
   cursor: pointer;
   border: none;
   background: none;
+  font-weight: 500;
+  transition: all 0.15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  color: #333;
 }
 
-.cal-day:hover:not(:disabled) { background: var(--gray-100); }
-.cal-day.has-slots { color: var(--line-green); font-weight: 600; }
-.cal-day.selected { background: var(--line-green); color: #fff; }
-.cal-day:disabled { color: var(--gray-300); cursor: not-allowed; }
+.cal-day:hover:not(:disabled) {
+  background: #f0f2f5;
+}
 
-/* 時間スロット */
+.cal-day.has-slots {
+  color: var(--line-green);
+  font-weight: 700;
+}
+
+.cal-day.selected {
+  background: var(--line-green);
+  color: #fff !important;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(6, 199, 85, 0.4);
+}
+
+.cal-day:disabled {
+  color: #ced4da;
+  cursor: not-allowed;
+}
+
+/* ─── 時間スロット ─── */
 .slot-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -136,72 +258,375 @@ body {
 }
 
 .slot-btn {
-  padding: 10px;
-  border: 1px solid var(--gray-300);
-  border-radius: var(--radius);
+  padding: 12px 6px;
+  border: 2px solid #eef0f3;
+  border-radius: 12px;
   background: #fff;
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   text-align: center;
   transition: all 0.15s;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+  color: #333;
+  line-height: 1.3;
 }
 
-.slot-btn:hover, .slot-btn.selected {
+.slot-btn:active {
+  transform: scale(0.95);
+}
+
+.slot-btn.selected {
   border-color: var(--line-green);
-  background: #f0fff4;
-  color: var(--line-green);
-  font-weight: 600;
+  background: var(--line-green);
+  color: #fff;
+  box-shadow: 0 3px 10px rgba(6, 199, 85, 0.4);
 }
 
-/* 確認画面 */
+.slot-btn:hover:not(.selected) {
+  border-color: var(--line-green);
+  color: var(--line-green);
+  background: var(--line-green-light);
+}
+
+/* ─── フォーム ─── */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: #444;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 2px solid #eef0f3;
+  border-radius: 10px;
+  font-size: 15px;
+  background: #fff;
+  transition: border-color 0.2s, box-shadow 0.2s;
+  box-sizing: border-box;
+  color: #1a1a2e;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+  border-color: var(--line-green);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(6, 199, 85, 0.1);
+}
+
+.form-group textarea {
+  min-height: 80px;
+  resize: vertical;
+}
+
+.form-hint {
+  font-size: 12px;
+  color: #6c757d;
+  background: #fff8e1;
+  border-radius: 8px;
+  padding: 10px 12px;
+  margin-top: 12px;
+  border-left: 3px solid #ffc107;
+}
+
+/* ─── 確認画面 ─── */
+.confirm-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
 .confirm-row {
   display: flex;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--gray-100);
+  padding: 11px 0;
+  border-bottom: 1px solid #f0f2f5;
   font-size: 14px;
+  align-items: flex-start;
+}
+
+.confirm-row:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
 }
 
 .confirm-row dt {
-  width: 100px;
-  color: var(--gray-500);
+  width: 90px;
+  color: #868e96;
   flex-shrink: 0;
+  font-size: 13px;
+  padding-top: 1px;
 }
 
-/* フッターボタン */
+.confirm-row dd {
+  font-weight: 600;
+  flex: 1;
+  color: #1a1a2e;
+}
+
+/* ─── 完了画面 ─── */
+.complete-screen {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.complete-icon {
+  width: 80px;
+  height: 80px;
+  background: var(--line-green-light);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  margin: 0 auto 20px;
+  animation: pop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes pop {
+  from { transform: scale(0); opacity: 0; }
+  to   { transform: scale(1); opacity: 1; }
+}
+
+.complete-detail {
+  background: #fff;
+  border-radius: 16px;
+  padding: 20px;
+  margin: 0 0 24px;
+  text-align: left;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+/* ─── フッターボタン ─── */
 .liff-footer {
   position: sticky;
   bottom: 0;
   background: #fff;
   padding: 12px 16px;
-  border-top: 1px solid var(--gray-200);
+  border-top: 1px solid #eef0f3;
+  display: flex;
+  gap: 10px;
+  box-shadow: 0 -4px 16px rgba(0,0,0,0.06);
+  z-index: 100;
+}
+
+.btn-line {
+  background: var(--header-gradient);
+  color: #fff;
+  flex: 1;
+  padding: 15px;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 14px rgba(6, 199, 85, 0.35);
+  letter-spacing: 0.3px;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-line:active {
+  transform: scale(0.97);
+}
+
+.btn-line:hover {
+  box-shadow: 0 6px 18px rgba(6, 199, 85, 0.45);
+}
+
+.btn-line:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.btn-back {
+  background: #f0f2f5;
+  color: #555;
+  padding: 15px 20px;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: background 0.15s;
+}
+
+.btn-back:active {
+  background: #e2e5ea;
+}
+
+/* ─── ローディング ─── */
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255,255,255,0.92);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  gap: 14px;
+  font-size: 14px;
+  color: #868e96;
+}
+
+.loading-overlay::before {
+  content: '';
+  width: 40px;
+  height: 40px;
+  border: 3px solid #e9ecef;
+  border-top-color: var(--line-green);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* ─── 予約カード（my-reservations.html） ─── */
+.res-section-title {
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #868e96;
+  margin: 20px 0 10px 2px;
+}
+
+.reservation-card {
+  background: #fff;
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 10px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  border-left: 4px solid var(--line-green);
+  transition: transform 0.15s;
+}
+
+.reservation-card:active {
+  transform: scale(0.99);
+}
+
+.reservation-card.past {
+  border-left-color: #ced4da;
+  opacity: 0.75;
+}
+
+.reservation-card.cancelled {
+  border-left-color: #ef4444;
+  opacity: 0.6;
+}
+
+.res-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.res-date {
+  font-weight: 700;
+  font-size: 15px;
+  color: #1a1a2e;
+}
+
+.res-time {
+  font-size: 20px;
+  font-weight: 800;
+  color: var(--line-green);
+  margin-top: 2px;
+}
+
+.reservation-card.past .res-time {
+  color: #adb5bd;
+}
+
+.res-badge {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 20px;
+  flex-shrink: 0;
+}
+
+.res-badge.confirmed { background: #e8faf0; color: var(--line-green-dark); }
+.res-badge.pending   { background: #fff8e1; color: #e6a817; }
+.res-badge.cancelled { background: #fee2e2; color: #ef4444; }
+.res-badge.completed { background: #f0f2f5;  color: #868e96; }
+.res-badge.no_show   { background: #fee2e2; color: #ef4444; }
+
+.res-detail {
+  font-size: 13px;
+  color: #6c757d;
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+
+.res-code {
+  font-size: 11px;
+  color: #adb5bd;
+  margin-top: 4px;
+  font-family: monospace;
+}
+
+.res-actions {
   display: flex;
   gap: 8px;
 }
 
-.btn-line {
-  background: var(--line-green);
-  color: #fff;
-  flex: 1;
-  padding: 14px;
-  font-size: 16px;
-  font-weight: 700;
-  border: none;
-  border-radius: var(--radius);
+.btn-cancel {
+  font-size: 13px;
+  padding: 7px 14px;
+  border: 1.5px solid #ef4444;
+  background: none;
+  color: #ef4444;
+  border-radius: 8px;
   cursor: pointer;
+  font-weight: 600;
+  transition: all 0.15s;
 }
 
-.btn-line:hover { background: var(--line-green-dark); }
-.btn-line:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-back { background: var(--gray-200); color: var(--gray-700); padding: 14px 20px; border: none; border-radius: var(--radius); cursor: pointer; }
+.btn-cancel:active {
+  background: #fee2e2;
+}
 
-.loading-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(255,255,255,0.8);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
+/* ─── 空っぽ状態 ─── */
+.empty-state {
+  text-align: center;
+  padding: 60px 20px 40px;
+}
+
+.empty-icon {
+  font-size: 56px;
+  margin-bottom: 16px;
+  opacity: 0.6;
+}
+
+.empty-title {
   font-size: 16px;
-  color: var(--gray-500);
+  font-weight: 700;
+  color: #495057;
+  margin-bottom: 8px;
+}
+
+.empty-sub {
+  font-size: 13px;
+  color: #adb5bd;
+  margin-bottom: 24px;
 }

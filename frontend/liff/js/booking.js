@@ -30,6 +30,13 @@ window.addEventListener("DOMContentLoaded", async () => {
     const ready = await initLiff();
     if (!ready) return;
 
+    // ページルーティング: page=my-reservations なら予約確認ページへ
+    const page = getPageParam();
+    if (page === "my-reservations") {
+      location.replace(`my-reservations.html?store_id=${state.storeId}`);
+      return;
+    }
+
     const [store, menus, staffList] = await Promise.all([
       liffApi.get(`/liff/stores/${state.storeId}`),
       liffApi.get(`/liff/stores/${state.storeId}/menus`),
@@ -124,17 +131,17 @@ function renderMenuStep(container) {
   });
 
   container.innerHTML = `
-    <h2 style="font-size:16px;font-weight:600;margin-bottom:16px">メニューを選択してください</h2>
+    <p class="step-title">メニューを選択してください</p>
     ${Object.entries(categories).map(([cat, menus]) => `
-      <h3 style="font-size:13px;color:var(--gray-500);margin:12px 0 6px">${escapeHtml(cat)}</h3>
+      <div class="category-label">${escapeHtml(cat)}</div>
       ${menus.map(m => `
         <div class="select-card ${state.selectedMenu?.id === m.id ? "selected" : ""}"
              onclick="selectMenu(${JSON.stringify(m).replace(/"/g, '&quot;')})">
           <div class="card-title">${escapeHtml(m.name)}</div>
           <div class="card-sub">
             ${m.duration_minutes}分
-            ${m.price != null ? ` / ¥${m.price.toLocaleString()}` : ""}
-            ${m.description ? ` / ${escapeHtml(m.description)}` : ""}
+            ${m.price != null ? ` &nbsp;·&nbsp; ¥${m.price.toLocaleString()}` : ""}
+            ${m.description ? ` &nbsp;·&nbsp; ${escapeHtml(m.description)}` : ""}
           </div>
         </div>
       `).join("")}
@@ -156,18 +163,30 @@ function selectMenu(menu) {
 
 function renderStaffStep(container) {
   container.innerHTML = `
-    <h2 style="font-size:16px;font-weight:600;margin-bottom:16px">担当を選択してください</h2>
+    <p class="step-title">担当を選択してください</p>
     <div class="select-card ${state.selectedStaff === null ? "selected" : ""}"
          onclick="selectStaff(null)">
-      <div class="card-title">指名なし（おまかせ）</div>
-      <div class="card-sub">空きのあるスタッフが担当します</div>
+      <div class="card-inner">
+        <div style="width:48px;height:48px;border-radius:50%;background:#f0f2f5;display:flex;align-items:center;justify-content:center;font-size:22px;margin-right:12px;flex-shrink:0">🎲</div>
+        <div>
+          <div class="card-title">指名なし（おまかせ）</div>
+          <div class="card-sub">空きのあるスタッフが担当します</div>
+        </div>
+      </div>
     </div>
     ${state.staffList.map(s => `
       <div class="select-card ${state.selectedStaff?.id === s.id ? "selected" : ""}"
            onclick='selectStaff(${JSON.stringify(s)})'>
-        ${s.image_url ? `<img src="${s.image_url}" style="width:48px;height:48px;border-radius:50%;float:left;margin-right:12px">` : ""}
-        <div class="card-title">${escapeHtml(s.name)} ${s.role ? `<span style="font-weight:400;font-size:12px">${escapeHtml(s.role)}</span>` : ""}</div>
-        ${s.bio ? `<div class="card-sub">${escapeHtml(s.bio)}</div>` : ""}
+        <div class="card-inner">
+          ${s.image_url
+            ? `<img class="staff-avatar" src="${s.image_url}" alt="${escapeHtml(s.name)}">`
+            : `<div style="width:48px;height:48px;border-radius:50%;background:var(--line-green-light);display:flex;align-items:center;justify-content:center;font-size:20px;margin-right:12px;flex-shrink:0;color:var(--line-green-dark);font-weight:700">${escapeHtml(s.name).charAt(0)}</div>`
+          }
+          <div>
+            <div class="card-title">${escapeHtml(s.name)}${s.role ? ` <span style="font-weight:400;font-size:12px;color:#868e96">${escapeHtml(s.role)}</span>` : ""}</div>
+            ${s.bio ? `<div class="card-sub">${escapeHtml(s.bio)}</div>` : ""}
+          </div>
+        </div>
       </div>
     `).join("")}
   `;
@@ -193,7 +212,7 @@ function renderDateStep(container) {
   state.calendarMonth = state.calendarMonth !== null ? state.calendarMonth : now.getMonth();
 
   container.innerHTML = `
-    <h2 style="font-size:16px;font-weight:600;margin-bottom:8px">日時を選択してください</h2>
+    <p class="step-title">日時を選択してください</p>
     <div id="calendar-area"></div>
     <div id="slots-area"></div>
   `;
@@ -301,7 +320,7 @@ function renderInfoStep(container) {
   const isNew = !c?.name;
 
   container.innerHTML = `
-    <h2 style="font-size:16px;font-weight:600;margin-bottom:16px">お客様情報を入力してください</h2>
+    <p class="step-title">お客様情報を入力してください</p>
     <div class="form-group">
       <label>お名前 <span style="color:var(--danger)">*</span></label>
       <input type="text" id="i-name" value="${escapeHtml(c?.name || "")}" placeholder="山田 花子">
@@ -353,18 +372,18 @@ function renderConfirmStep(container) {
   const phone = document.getElementById("i-phone")?.value || state.customer?.phone;
 
   container.innerHTML = `
-    <h2 style="font-size:16px;font-weight:600;margin-bottom:16px">予約内容を確認してください</h2>
-    <div style="background:#fff;border-radius:var(--radius);padding:16px;margin-bottom:16px">
+    <p class="step-title">予約内容を確認してください</p>
+    <div class="confirm-card">
       <dl>
         <div class="confirm-row"><dt>メニュー</dt><dd>${escapeHtml(menu.name)}</dd></div>
         <div class="confirm-row"><dt>担当</dt><dd>${staff ? escapeHtml(staff.name) : "指名なし"}</dd></div>
-        <div class="confirm-row"><dt>日時</dt><dd>${formatDateJa(slot.start)} ${formatTime(slot.start)}〜${formatTime(slot.end)}</dd></div>
+        <div class="confirm-row"><dt>日時</dt><dd>${formatDateJa(slot.start)}<br>${formatTime(slot.start)}〜${formatTime(slot.end)}</dd></div>
         <div class="confirm-row"><dt>お名前</dt><dd>${escapeHtml(name || "")}</dd></div>
         <div class="confirm-row"><dt>電話番号</dt><dd>${escapeHtml(phone || "")}</dd></div>
-        <div class="confirm-row" style="border:none"><dt>料金</dt><dd>${menu.price != null ? `¥${menu.price.toLocaleString()}` : "店頭にてご確認"}</dd></div>
+        <div class="confirm-row"><dt>料金</dt><dd>${menu.price != null ? `¥${menu.price.toLocaleString()}` : "店頭にてご確認"}</dd></div>
       </dl>
     </div>
-    <p style="font-size:12px;color:var(--gray-500);text-align:center">
+    <p style="font-size:12px;color:#adb5bd;text-align:center;padding:0 8px">
       「予約を確定する」を押すと予約が完了します。<br>
       LINEに確認メッセージが届きます。
     </p>
@@ -408,17 +427,17 @@ async function submitReservation() {
     document.getElementById("loading-overlay").style.display = "none";
     document.querySelector(".progress-bar").style.display = "none";
     document.getElementById("content").innerHTML = `
-      <div style="text-align:center;padding:32px 16px">
-        <div style="font-size:48px;margin-bottom:16px">✅</div>
-        <h2 style="font-size:20px;font-weight:700;margin-bottom:8px">予約が完了しました</h2>
-        <p style="color:var(--gray-500);margin-bottom:24px">
+      <div class="complete-screen">
+        <div class="complete-icon">🎉</div>
+        <h2 style="font-size:20px;font-weight:800;margin-bottom:8px;color:#1a1a2e">予約が完了しました！</h2>
+        <p style="color:#868e96;margin-bottom:24px;font-size:14px">
           LINEに予約確認メッセージをお送りしました。
         </p>
-        <div style="background:#f9fafb;border-radius:8px;padding:16px;margin-bottom:24px;text-align:left">
-          <div style="margin-bottom:8px"><strong>予約番号:</strong> ${res.confirmation_code}</div>
-          <div style="margin-bottom:8px"><strong>メニュー:</strong> ${escapeHtml(state.selectedMenu.name)}</div>
-          <div style="margin-bottom:8px"><strong>担当:</strong> ${state.selectedStaff ? escapeHtml(state.selectedStaff.name) : "指名なし"}</div>
-          <div><strong>日時:</strong> ${formatDateJa(state.selectedSlot.start)} ${formatTime(state.selectedSlot.start)}</div>
+        <div class="complete-detail">
+          <div class="confirm-row"><dt>予約番号</dt><dd style="font-family:monospace">${res.confirmation_code}</dd></div>
+          <div class="confirm-row"><dt>メニュー</dt><dd>${escapeHtml(state.selectedMenu.name)}</dd></div>
+          <div class="confirm-row"><dt>担当</dt><dd>${state.selectedStaff ? escapeHtml(state.selectedStaff.name) : "指名なし"}</dd></div>
+          <div class="confirm-row"><dt>日時</dt><dd>${formatDateJa(state.selectedSlot.start)}<br>${formatTime(state.selectedSlot.start)}</dd></div>
         </div>
         <button class="btn-line" onclick="liff.closeWindow()">LINEに戻る</button>
       </div>

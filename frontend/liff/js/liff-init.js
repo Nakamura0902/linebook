@@ -53,6 +53,17 @@ function showError(message) {
   document.body.appendChild(errDiv);
 }
 
+function getPageParam() {
+  const direct = new URLSearchParams(location.search).get("page");
+  if (direct) return direct;
+  const liffState = new URLSearchParams(location.search).get("liff.state");
+  if (liffState) {
+    const decoded = decodeURIComponent(liffState);
+    return new URLSearchParams(decoded).get("page");
+  }
+  return null;
+}
+
 function getStoreId() {
   // 通常のクエリパラメータを確認
   const direct = new URLSearchParams(location.search).get("store_id");
