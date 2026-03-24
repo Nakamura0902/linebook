@@ -21,6 +21,14 @@ const TOTAL_STEPS = 5;
 
 window.addEventListener("DOMContentLoaded", async () => {
   state.storeId = getStoreId();
+
+  // ページルーティング: liff.init前にliff.stateから判定
+  const page = getPageParam();
+  if (page === "my-reservations") {
+    location.replace(`my-reservations.html${state.storeId ? "?store_id=" + state.storeId : ""}`);
+    return;
+  }
+
   if (!state.storeId) {
     showError("店舗IDが指定されていません");
     return;
@@ -29,13 +37,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   try {
     const ready = await initLiff();
     if (!ready) return;
-
-    // ページルーティング: page=my-reservations なら予約確認ページへ
-    const page = getPageParam();
-    if (page === "my-reservations") {
-      location.replace(`my-reservations.html?store_id=${state.storeId}`);
-      return;
-    }
 
     const [store, menus, staffList] = await Promise.all([
       liffApi.get(`/liff/stores/${state.storeId}`),
