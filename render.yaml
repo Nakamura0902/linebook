@@ -7,7 +7,9 @@ services:
     buildCommand: |
       cd backend
       pip install -r requirements.txt
+      pip install eval_type_backport "bcrypt==4.0.1"
       alembic upgrade head
+      python seed.py
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
@@ -20,15 +22,15 @@ services:
           name: linebook-db
           property: connectionString
       - key: JWT_SECRET_KEY
-        generateValue: true
+        value: 31caaddd4fbd8c26373b7cc721a867757f6233414732776e164da238edb8fc8b
       - key: APP_SECRET_KEY
-        generateValue: true
+        value: 32af8fe66ca37b44dd49496544ee26a20115ea5e54d62c9f82f47366db15388f
       - key: LINE_CHANNEL_ACCESS_TOKEN
         sync: false
       - key: LINE_CHANNEL_SECRET
-        sync: false
+        value: ab23ccddbcfc223799e93dc1d3a9c805
       - key: LINE_LIFF_ID
-        sync: false
+        value: 2009586205-CyS3JZM7
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET
