@@ -33,7 +33,11 @@ services:
       - key: GOOGLE_REDIRECT_URI
         sync: false
       - key: CORS_ORIGINS
-        sync: false
+        value: https://linebook-api.onrender.com
+      - key: LIFF_BASE_URL
+        value: https://liff.line.me/2009586205-CyS3JZM7
+      - key: ADMIN_BASE_URL
+        value: https://linebook-api.onrender.com/admin
       - key: PYTHON_VERSION
         value: 3.11.0
 

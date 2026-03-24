@@ -30,9 +30,8 @@ async def lifespan(app: FastAPI):
     setup_logging(debug=settings.debug)
     logger.info("Starting linebook API", extra={"env": settings.app_env})
 
-    # テーブルを自動作成（開発時のみ。本番はAlembicを使用）
-    if settings.app_env == "development":
-        Base.metadata.create_all(bind=engine)
+    # テーブルを自動作成
+    Base.metadata.create_all(bind=engine)
 
     # APSchedulerによるリマインドバッチ
     if settings.scheduler_enabled:
