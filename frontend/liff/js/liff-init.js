@@ -54,7 +54,16 @@ function showError(message) {
 }
 
 function getStoreId() {
-  return new URLSearchParams(location.search).get("store_id");
+  // 通常のクエリパラメータを確認
+  const direct = new URLSearchParams(location.search).get("store_id");
+  if (direct) return direct;
+  // LIFFがliff.stateにエンコードした場合
+  const liffState = new URLSearchParams(location.search).get("liff.state");
+  if (liffState) {
+    const decoded = decodeURIComponent(liffState);
+    return new URLSearchParams(decoded).get("store_id");
+  }
+  return null;
 }
 
 function formatTime(isoStr) {
