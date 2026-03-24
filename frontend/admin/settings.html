@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>設定 - LINE予約管理</title>
+  <link rel="stylesheet" href="../shared/css/base.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <style>
+    .tabs { display: flex; gap: 4px; border-bottom: 2px solid var(--gray-200); margin-bottom: 24px; }
+    .tab { padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 14px;
+           color: var(--gray-500); border-bottom: 2px solid transparent; margin-bottom: -2px; }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); font-weight: 600; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    .day-row { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .day-label { width: 40px; font-weight: 500; }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">LINE予約管理</div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html">ダッシュボード</a>
+        <a href="reservations.html">予約一覧</a>
+        <a href="calendar.html">カレンダー</a>
+        <a href="customers.html">顧客管理</a>
+        <a href="staff.html">スタッフ管理</a>
+        <a href="menus.html">メニュー管理</a>
+        <a href="settings.html" class="active">設定</a>
+      </nav>
+      <div class="sidebar-footer">
+        <span id="admin-name"></span>
+        <button class="btn btn-sm btn-outline" onclick="logout()">ログアウト</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1>店舗設定</h1>
+      </div>
+
+      <div class="tabs">
+        <button class="tab active" onclick="switchTab('general')">基本設定</button>
+        <button class="tab" onclick="switchTab('hours')">営業時間</button>
+        <button class="tab" onclick="switchTab('holidays')">休業日</button>
+        <button class="tab" onclick="switchTab('notifications')">通知文面</button>
+        <button class="tab" onclick="switchTab('policy')">キャンセルポリシー</button>
+        <button class="tab" onclick="switchTab('gcal')">Googleカレンダー</button>
+      </div>
+
+      <!-- 基本設定 -->
+      <div id="tab-general" class="tab-panel active card">
+        <div class="form-group">
+          <label>予約確定方式</label>
+          <select id="s-booking-mode">
+            <option value="auto">自動確定</option>
+            <option value="approval">承認制（仮予約）</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>スロット単位（分）</label>
+          <select id="s-slot">
+            <option value="15">15分</option>
+            <option value="30">30分</option>
+            <option value="60">60分</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>予約受付可能日数（何日先まで）</label>
+          <input type="number" id="s-advance" min="1" max="365">
+        </div>
+        <div class="form-group">
+          <label>最低受付時間（X時間前まで）</label>
+          <input type="number" id="s-min-hours" min="0">
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="s-reminder"> 前日リマインドを有効にする
+          </label>
+        </div>
+        <div class="form-group">
+          <label>リマインド送信時刻</label>
+          <input type="time" id="s-reminder-time">
+        </div>
+        <button class="btn btn-primary" onclick="saveGeneral()">保存</button>
+      </div>
+
+      <!-- 営業時間 -->
+      <div id="tab-hours" class="tab-panel card">
+        <div id="hours-form"></div>
+        <button class="btn btn-primary" style="margin-top:16px" onclick="saveHours()">保存</button>
+      </div>
+
+      <!-- 休業日 -->
+      <div id="tab-holidays" class="tab-panel card">
+        <div class="form-group" style="display:flex;gap:12px;align-items:flex-end">
+          <div style="flex:1">
+            <label>休業日を追加</label>
+            <input type="date" id="new-holiday-date">
+          </div>
+          <div style="flex:2">
+            <label>理由（任意）</label>
+            <input type="text" id="new-holiday-reason" placeholder="年末年始等">
+          </div>
+          <button class="btn btn-primary" onclick="addHoliday()">追加</button>
+        </div>
+        <div id="holidays-list" style="margin-top:16px"></div>
+      </div>
+
+      <!-- 通知文面 -->
+      <div id="tab-notifications" class="tab-panel card">
+        <div id="notification-forms"></div>
+      </div>
+
+      <!-- キャンセルポリシー -->
+      <div id="tab-policy" class="tab-panel card">
+        <div id="policies-list"></div>
+        <hr style="margin:16px 0">
+        <h3 style="margin-bottom:12px">新規追加</h3>
+        <div class="form-group">
+          <label>ポリシー名</label>
+          <input type="text" id="p-name" placeholder="標準キャンセルポリシー">
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="p-default"> デフォルトに設定
+          </label>
+        </div>
+        <div class="form-group">
+          <label>キャンセル可能期限（X時間前まで、空欄=無制限）</label>
+          <input type="number" id="p-hours" placeholder="24" min="0">
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="p-same-day" checked> 当日キャンセル可
+          </label>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="p-require-reason"> キャンセル理由を必須にする
+          </label>
+        </div>
+        <div class="form-group">
+          <label>顧客向け説明</label>
+          <textarea id="p-desc"></textarea>
+        </div>
+        <button class="btn btn-primary" onclick="addPolicy()">追加</button>
+      </div>
+
+      <!-- Googleカレンダー -->
+      <div id="tab-gcal" class="tab-panel card">
+        <p style="margin-bottom:16px">GoogleカレンダーとOAuth連携して予約をカレンダーに自動書き込みします。</p>
+        <button class="btn btn-primary" onclick="connectGoogle()">Google連携を設定する</button>
+        <div id="gcal-status" style="margin-top:16px"></div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/admin-layout.js"></script>
+  <script>
+    const storeId = getStoreId();
+    const DAYS = ["日", "月", "火", "水", "木", "金", "土"];
+    const NOTIF_TYPES = [
+      {type:"booking_confirmed", label:"予約確定通知"},
+      {type:"booking_changed", label:"予約変更通知"},
+      {type:"booking_cancelled", label:"予約取消通知"},
+      {type:"reminder", label:"前日リマインド"},
+      {type:"admin_new", label:"管理者向け：新規予約"},
+    ];
+
+    function switchTab(name) {
+      document.querySelectorAll(".tab").forEach((t, i) => t.classList.remove("active"));
+      document.querySelectorAll(".tab-panel").forEach(p => p.classList.remove("active"));
+      event.target.classList.add("active");
+      document.getElementById(`tab-${name}`).classList.add("active");
+    }
+
+    // 基本設定ロード
+    async function loadGeneral() {
+      const s = await api.get(`/admin/stores/${storeId}/settings`);
+      document.getElementById("s-booking-mode").value = s.booking_mode || "auto";
+      document.getElementById("s-slot").value = s.slot_duration_minutes || 30;
+      document.getElementById("s-advance").value = s.advance_booking_days || 60;
+      document.getElementById("s-min-hours").value = s.min_booking_hours || 1;
+      document.getElementById("s-reminder").checked = s.reminder_enabled !== false;
+      document.getElementById("s-reminder-time").value = s.reminder_send_time || "09:00";
+    }
+
+    async function saveGeneral() {
+      await api.put(`/admin/stores/${storeId}/settings`, {
+        booking_mode: document.getElementById("s-booking-mode").value,
+        slot_duration_minutes: parseInt(document.getElementById("s-slot").value),
+        advance_booking_days: parseInt(document.getElementById("s-advance").value),
+        min_booking_hours: parseInt(document.getElementById("s-min-hours").value),
+        reminder_enabled: document.getElementById("s-reminder").checked,
+        reminder_send_time: document.getElementById("s-reminder-time").value,
+      });
+      showToast("保存しました");
+    }
+
+    // 営業時間
+    async function loadHours() {
+      const hours = await api.get(`/admin/stores/${storeId}/business-hours`);
+      const form = document.getElementById("hours-form");
+      const hoursMap = {};
+      hours.forEach(h => hoursMap[h.day_of_week] = h);
+
+      form.innerHTML = DAYS.map((day, dow) => {
+        const h = hoursMap[dow] || {is_open: dow !== 0, open_time: "10:00", close_time: "20:00"};
+        return `
+          <div class="day-row">
+            <span class="day-label">${day}</span>
+            <input type="checkbox" id="open-${dow}" ${h.is_open ? "checked" : ""}
+              onchange="document.getElementById('times-${dow}').style.opacity=this.checked?1:0.4">
+            <div id="times-${dow}" style="display:flex;gap:8px;opacity:${h.is_open?1:0.4}">
+              <input type="time" id="open-${dow}-from" value="${h.open_time || "10:00"}" style="width:120px">
+              〜
+              <input type="time" id="open-${dow}-to" value="${h.close_time || "20:00"}" style="width:120px">
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function saveHours() {
+      const hours = DAYS.map((_, dow) => ({
+        day_of_week: dow,
+        is_open: document.getElementById(`open-${dow}`).checked,
+        open_time: document.getElementById(`open-${dow}-from`).value || null,
+        close_time: document.getElementById(`open-${dow}-to`).value || null,
+      }));
+      await api.put(`/admin/stores/${storeId}/business-hours`, { hours });
+      showToast("営業時間を保存しました");
+    }
+
+    // 休業日
+    async function loadHolidays() {
+      const holidays = await api.get(`/admin/stores/${storeId}/holidays`);
+      const list = document.getElementById("holidays-list");
+      if (!holidays.length) {
+        list.innerHTML = '<div class="empty-state">休業日が設定されていません</div>';
+        return;
+      }
+      list.innerHTML = holidays.map(h => `
+        <div style="display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--gray-200)">
+          <span style="flex:1">${h.date} ${h.reason ? `(${h.reason})` : ""}</span>
+          <button class="btn btn-sm btn-danger" onclick="deleteHoliday('${h.id}')">削除</button>
+        </div>
+      `).join("");
+    }
+
+    async function addHoliday() {
+      const date = document.getElementById("new-holiday-date").value;
+      const reason = document.getElementById("new-holiday-reason").value;
+      if (!date) { showToast("日付を入力してください", "error"); return; }
+      await api.post(`/admin/stores/${storeId}/holidays`, { date, reason });
+      showToast("休業日を追加しました");
+      document.getElementById("new-holiday-date").value = "";
+      document.getElementById("new-holiday-reason").value = "";
+      loadHolidays();
+    }
+
+    async function deleteHoliday(id) {
+      if (!confirm("削除しますか？")) return;
+      await api.delete(`/admin/stores/${storeId}/holidays/${id}`);
+      showToast("削除しました");
+      loadHolidays();
+    }
+
+    // 通知テンプレート
+    async function loadNotifications() {
+      const templates = await api.get(`/admin/stores/${storeId}/notification-templates`);
+      const tmplMap = {};
+      templates.forEach(t => tmplMap[t.type] = t);
+
+      document.getElementById("notification-forms").innerHTML = NOTIF_TYPES.map(n => {
+        const t = tmplMap[n.type] || {body: "", is_active: true};
+        return `
+          <div style="margin-bottom:24px">
+            <h4 style="margin-bottom:8px">${n.label}</h4>
+            <div class="form-hint" style="margin-bottom:6px">
+              使用可能な変数: {{customer_name}} {{reservation_date}} {{reservation_time}} {{end_time}} {{staff_name}} {{menu_name}} {{confirmation_code}} {{store_name}} {{store_phone}}
+            </div>
+            <textarea id="tmpl-${n.type}" rows="5">${t.body}</textarea>
+            <div style="margin-top:6px;display:flex;gap:12px;align-items:center">
+              <label>
+                <input type="checkbox" id="tmpl-active-${n.type}" ${t.is_active ? "checked" : ""}> 有効
+              </label>
+              <button class="btn btn-sm btn-primary" onclick="saveTemplate('${n.type}')">保存</button>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function saveTemplate(type) {
+      await api.put(`/admin/stores/${storeId}/notification-templates`, {
+        type,
+        body: document.getElementById(`tmpl-${type}`).value,
+        is_active: document.getElementById(`tmpl-active-${type}`).checked,
+      });
+      showToast("保存しました");
+    }
+
+    // キャンセルポリシー
+    async function loadPolicies() {
+      const policies = await api.get(`/admin/stores/${storeId}/cancellation-policies`);
+      const list = document.getElementById("policies-list");
+      if (!policies.length) {
+        list.innerHTML = '<div class="empty-state">ポリシーが設定されていません</div>';
+        return;
+      }
+      list.innerHTML = policies.map(p => `
+        <div style="padding:12px;border:1px solid var(--gray-200);border-radius:var(--radius);margin-bottom:8px">
+          <strong>${p.name}</strong>${p.is_default ? ' <span class="badge badge-confirmed">デフォルト</span>' : ""}
+          <div style="font-size:12px;color:var(--gray-500);margin-top:4px">
+            ${p.cancel_deadline_hours ? `${p.cancel_deadline_hours}時間前まで可` : "期限なし"} /
+            当日${p.same_day_cancel_allowed ? "可" : "不可"} /
+            理由${p.require_cancel_reason ? "必須" : "任意"}
+          </div>
+          ${p.description ? `<div style="font-size:12px;margin-top:4px">${p.description}</div>` : ""}
+        </div>
+      `).join("");
+    }
+
+    async function addPolicy() {
+      await api.post(`/admin/stores/${storeId}/cancellation-policies`, {
+        name: document.getElementById("p-name").value,
+        is_default: document.getElementById("p-default").checked,
+        cancel_deadline_hours: parseInt(document.getElementById("p-hours").value) || null,
+        same_day_cancel_allowed: document.getElementById("p-same-day").checked,
+        require_cancel_reason: document.getElementById("p-require-reason").checked,
+        description: document.getElementById("p-desc").value || null,
+      });
+      showToast("追加しました");
+      loadPolicies();
+    }
+
+    // Google Calendar
+    async function connectGoogle() {
+      const data = await api.get(`/admin/stores/${storeId}/google/auth-url`);
+      window.open(data.auth_url, "_blank");
+      document.getElementById("gcal-status").textContent = "認証ページを新しいタブで開きました。認証後このページを更新してください。";
+    }
+
+    // 初期ロード
+    Promise.all([loadGeneral(), loadHours(), loadHolidays(), loadNotifications(), loadPolicies()])
+      .catch(err => showToast(err.message, "error"));
+  </script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>カレンダー - LINE予約管理</title>
+  <link rel="stylesheet" href="../shared/css/base.css">
+  <link rel="stylesheet" href="css/admin.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.css">
+  <style>
+    #calendar { background: #fff; padding: 16px; border-radius: var(--radius); }
+    .fc-event { cursor: pointer; font-size: 12px; }
+  </style>
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">LINE予約管理</div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html">ダッシュボード</a>
+        <a href="reservations.html">予約一覧</a>
+        <a href="calendar.html" class="active">カレンダー</a>
+        <a href="customers.html">顧客管理</a>
+        <a href="staff.html">スタッフ管理</a>
+        <a href="menus.html">メニュー管理</a>
+        <a href="settings.html">設定</a>
+      </nav>
+      <div class="sidebar-footer">
+        <span id="admin-name"></span>
+        <button class="btn btn-sm btn-outline" onclick="logout()">ログアウト</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1>予約カレンダー</h1>
+      </div>
+      <div id="calendar"></div>
+    </main>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/admin-layout.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.11/locales/ja.global.min.js"></script>
+  <script>
+    const storeId = getStoreId();
+
+    const calendar = new FullCalendar.Calendar(document.getElementById("calendar"), {
+      locale: "ja",
+      initialView: "timeGridWeek",
+      headerToolbar: {
+        left: "prev,next today",
+        center: "title",
+        right: "dayGridMonth,timeGridWeek,timeGridDay",
+      },
+      slotMinTime: "08:00:00",
+      slotMaxTime: "22:00:00",
+      allDaySlot: false,
+      events: async (fetchInfo, successCallback, failureCallback) => {
+        try {
+          const from = fetchInfo.startStr;
+          const to = fetchInfo.endStr;
+          const events = await api.get(
+            `/admin/stores/${storeId}/calendar?date_from=${from}&date_to=${to}`
+          );
+          successCallback(events);
+        } catch (err) {
+          failureCallback(err);
+        }
+      },
+      eventClick: (info) => {
+        const p = info.event.extendedProps;
+        alert(
+          `予約番号: ${p.confirmation_code || "-"}\n` +
+          `顧客: ${p.customer_name || "-"}\n` +
+          `担当: ${p.staff_name || "-"}\n` +
+          `メニュー: ${p.menu_name || "-"}\n` +
+          `ステータス: ${p.status}`
+        );
+      },
+    });
+
+    calendar.render();
+  </script>
+</body>
+</html>

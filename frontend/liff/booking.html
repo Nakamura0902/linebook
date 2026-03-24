@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>ご予約</title>
+  <link rel="stylesheet" href="../shared/css/base.css">
+  <link rel="stylesheet" href="../shared/css/liff.css">
+  <script>
+    window.LIFF_ID = "2009586205-CyS3JZM7";
+    window.API_BASE = "/api/v1";
+  </script>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+</head>
+<body>
+  <div id="loading-overlay" class="loading-overlay">読み込み中...</div>
+
+  <header class="liff-header" id="store-name">予約</header>
+
+  <!-- プログレスバー -->
+  <div class="progress-bar">
+    <div class="progress-step active" id="step-1">
+      <div class="circle">1</div><span>メニュー</span>
+    </div>
+    <div class="progress-step" id="step-2">
+      <div class="circle">2</div><span>スタッフ</span>
+    </div>
+    <div class="progress-step" id="step-3">
+      <div class="circle">3</div><span>日時</span>
+    </div>
+    <div class="progress-step" id="step-4">
+      <div class="circle">4</div><span>情報</span>
+    </div>
+    <div class="progress-step" id="step-5">
+      <div class="circle">5</div><span>確認</span>
+    </div>
+  </div>
+
+  <!-- ステップコンテンツ -->
+  <div class="liff-content" id="content"></div>
+
+  <!-- フッターボタン -->
+  <div class="liff-footer">
+    <button class="btn-back" id="btn-back" onclick="prevStep()" style="display:none">戻る</button>
+    <button class="btn-line" id="btn-next" onclick="nextStep()" disabled>次へ</button>
+  </div>
+
+  <script src="js/liff-init.js"></script>
+  <script src="js/booking.js"></script>
+</body>
+</html>

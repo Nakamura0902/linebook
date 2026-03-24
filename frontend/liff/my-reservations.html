@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>予約確認</title>
+  <link rel="stylesheet" href="../shared/css/base.css">
+  <link rel="stylesheet" href="../shared/css/liff.css">
+  <script>
+    window.LIFF_ID = "2009586205-CyS3JZM7";
+    window.API_BASE = "/api/v1";
+  </script>
+  <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+  <style>
+    .reservation-card {
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+      border-left: 4px solid var(--line-green);
+    }
+    .res-date { font-weight: 700; font-size: 16px; margin-bottom: 4px; }
+    .res-detail { font-size: 13px; color: var(--gray-500); margin-bottom: 8px; }
+    .res-actions { display: flex; gap: 8px; }
+  </style>
+</head>
+<body>
+  <div id="loading-overlay" class="loading-overlay">読み込み中...</div>
+
+  <header class="liff-header">予約確認</header>
+
+  <div class="liff-content">
+    <div id="reservations-list"></div>
+  </div>
+
+  <div class="liff-footer">
+    <button class="btn-line" onclick="liff.closeWindow()">LINEに戻る</button>
+  </div>
+
+  <script src="js/liff-init.js"></script>
+  <script>
+    const storeId = getStoreId();
+
+    window.addEventListener("DOMContentLoaded", async () => {
+      try {
+        const ready = await initLiff();
+        if (!ready) return;
+
+        // 顧客特定
+        const customerData = await liffApi.post(
+          `/liff/customers/identify?store_id=${storeId}`, {}
+        );
+        const customer = customerData.customer;
+
+        // 予約一覧取得
+        const reservations = await liffApi.get(`/liff/customers/${customer.id}/reservations`);
+
+        document.getElementById("loading-overlay").style.display = "none";
+
+        const listEl = document.getElementById("reservations-list");
+        if (!reservations.length) {
+          listEl.innerHTML = `
+            <div style="text-align:center;padding:48px 16px">
+              <p style="font-size:16px;color:var(--gray-500)">予約がありません</p>
+              <a href="booking.html?store_id=${storeId}" style="display:block;margin-top:16px" class="btn-line"
+                 style="text-decoration:none;padding:12px">予約する</a>
+            </div>
+          `;
+          return;
+        }
+
+        listEl.innerHTML = reservations.map(r => `
+          <div class="reservation-card">
+            <div class="res-date">${formatDateJa(r.start_datetime)} ${formatTime(r.start_datetime)}</div>
+            <div class="res-detail">
+              ${r.menu_name || ""} / ${r.staff_name || "指名なし"}<br>
+              予約番号: ${r.confirmation_code || ""}
+              ${r.status === "pending" ? ' <span style="color:var(--warning);font-weight:600">（確認待ち）</span>' : ""}
+            </div>
+            <div class="res-actions">
+              ${["confirmed","pending"].includes(r.status) ? `
+                <button class="btn btn-sm btn-outline" onclick="cancelRes('${r.id}')">取消</button>
+              ` : `<span style="font-size:12px;color:var(--gray-400)">${statusLabel(r.status)}</span>`}
+            </div>
+          </div>
+        `).join("");
+
+      } catch (err) {
+        document.getElementById("loading-overlay").style.display = "none";
+        showError(err.message);
+      }
+    });
+
+    async function cancelRes(reservationId) {
+      if (!confirm("予約を取消しますか？")) return;
+      try {
+        await liffApi.delete(`/liff/reservations/${reservationId}`, { reason: null });
+        alert("予約を取消しました");
+        location.reload();
+      } catch (err) {
+        alert(err.message);
+      }
+    }
+
+    function statusLabel(status) {
+      const labels = { completed: "完了", cancelled: "取消済み", no_show: "無断欠席" };
+      return labels[status] || status;
+    }
+  </script>
+</body>
+</html>

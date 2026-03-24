@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LINE予約管理 - ログイン</title>
+  <link rel="stylesheet" href="../shared/css/base.css">
+  <style>
+    body { display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+    .login-box { width: 100%; max-width: 400px; padding: 20px; }
+    .login-box h1 { text-align: center; font-size: 22px; margin-bottom: 8px; color: var(--primary); }
+    .login-box p { text-align: center; color: var(--gray-500); margin-bottom: 32px; font-size: 13px; }
+    .error-msg { color: var(--danger); font-size: 13px; text-align: center; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="login-box card">
+    <h1>LINE予約管理</h1>
+    <p>店舗管理者ログイン</p>
+    <form id="login-form">
+      <div class="form-group">
+        <label for="email">メールアドレス</label>
+        <input type="email" id="email" required placeholder="admin@example.com" autocomplete="email">
+      </div>
+      <div class="form-group">
+        <label for="password">パスワード</label>
+        <input type="password" id="password" required placeholder="パスワード" autocomplete="current-password">
+      </div>
+      <button type="submit" class="btn btn-primary" style="width:100%">ログイン</button>
+      <p class="error-msg" id="error-msg" style="display:none"></p>
+    </form>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script>
+    // ログイン済みならダッシュボードへ
+    if (localStorage.getItem("access_token")) {
+      location.href = "dashboard.html";
+    }
+
+    document.getElementById("login-form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const btn = e.target.querySelector("button");
+      btn.disabled = true;
+      btn.textContent = "ログイン中...";
+
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+
+      try {
+        const res = await fetch("/api/v1/admin/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.detail || "ログインに失敗しました");
+        }
+
+        const data = await res.json();
+        localStorage.setItem("access_token", data.access_token);
+        localStorage.setItem("admin_name", data.name);
+        localStorage.setItem("admin_role", data.role);
+        location.href = "dashboard.html";
+
+      } catch (err) {
+        const errEl = document.getElementById("error-msg");
+        errEl.textContent = err.message;
+        errEl.style.display = "block";
+        btn.disabled = false;
+        btn.textContent = "ログイン";
+      }
+    });
+  </script>
+</body>
+</html>

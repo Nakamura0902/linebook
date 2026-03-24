@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ダッシュボード - LINE予約管理</title>
+  <link rel="stylesheet" href="../shared/css/base.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <span>LINE予約管理</span>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html" class="active">ダッシュボード</a>
+        <a href="reservations.html">予約一覧</a>
+        <a href="calendar.html">カレンダー</a>
+        <a href="customers.html">顧客管理</a>
+        <a href="staff.html">スタッフ管理</a>
+        <a href="menus.html">メニュー管理</a>
+        <a href="settings.html">設定</a>
+      </nav>
+      <div class="sidebar-footer">
+        <span id="admin-name"></span>
+        <button class="btn btn-sm btn-outline" onclick="logout()">ログアウト</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1>ダッシュボード</h1>
+        <div id="store-name" style="color:var(--gray-500)"></div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="card stat-card">
+          <div class="stat-label">今日の予約</div>
+          <div class="stat-value" id="today-count">--</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-label">今週の予約</div>
+          <div class="stat-value" id="week-count">--</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-label">今月の予約</div>
+          <div class="stat-value" id="month-count">--</div>
+        </div>
+        <div class="card stat-card">
+          <div class="stat-label">総顧客数</div>
+          <div class="stat-value" id="customer-count">--</div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:24px">
+        <h2 style="margin-bottom:16px;font-size:16px">今日の予約</h2>
+        <div id="today-reservations">
+          <div class="loading">読み込み中...</div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/admin-layout.js"></script>
+  <script>
+    async function loadDashboard() {
+      const storeId = getStoreId();
+      if (!storeId) {
+        showToast("店舗が設定されていません", "error");
+        return;
+      }
+
+      const today = new Date();
+      const todayStr = today.toISOString().split("T")[0];
+      const todayEnd = `${todayStr}T23:59:59`;
+
+      // 今日の予約
+      const todayRes = await api.get(
+        `/admin/stores/${storeId}/reservations?date_from=${todayStr}T00:00:00&date_to=${todayEnd}&limit=100`
+      );
+
+      document.getElementById("today-count").textContent = todayRes.total;
+
+      if (todayRes.items.length === 0) {
+        document.getElementById("today-reservations").innerHTML =
+          '<div class="empty-state">今日の予約はありません</div>';
+      } else {
+        const rows = todayRes.items.map(r => `
+          <tr>
+            <td>${formatDateTime(r.start_datetime)}</td>
+            <td>${r.customer_name || "-"}</td>
+            <td>${r.staff_name || "-"}</td>
+            <td>${r.menu_name || "-"}</td>
+            <td>${statusBadge(r.status)}</td>
+            <td>
+              <a href="reservations.html?id=${r.id}&store_id=${storeId}" class="btn btn-sm btn-outline">詳細</a>
+            </td>
+          </tr>
+        `).join("");
+
+        document.getElementById("today-reservations").innerHTML = `
+          <table>
+            <thead><tr>
+              <th>時刻</th><th>顧客</th><th>担当</th><th>メニュー</th><th>ステータス</th><th></th>
+            </tr></thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      }
+    }
+
+    loadDashboard().catch(err => showToast(err.message, "error"));
+  </script>
+</body>
+</html>

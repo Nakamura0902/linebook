@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>予約一覧 - LINE予約管理</title>
+  <link rel="stylesheet" href="../shared/css/base.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">LINE予約管理</div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html">ダッシュボード</a>
+        <a href="reservations.html" class="active">予約一覧</a>
+        <a href="calendar.html">カレンダー</a>
+        <a href="customers.html">顧客管理</a>
+        <a href="staff.html">スタッフ管理</a>
+        <a href="menus.html">メニュー管理</a>
+        <a href="settings.html">設定</a>
+      </nav>
+      <div class="sidebar-footer">
+        <span id="admin-name"></span>
+        <button class="btn btn-sm btn-outline" onclick="logout()">ログアウト</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1>予約一覧</h1>
+        <div class="page-actions">
+          <button class="btn btn-primary" onclick="openModal('create-modal')">+ 代理予約</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="filter-bar">
+          <div class="form-group">
+            <label>日付（開始）</label>
+            <input type="date" id="filter-from">
+          </div>
+          <div class="form-group">
+            <label>日付（終了）</label>
+            <input type="date" id="filter-to">
+          </div>
+          <div class="form-group">
+            <label>スタッフ</label>
+            <select id="filter-staff">
+              <option value="">すべて</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>ステータス</label>
+            <select id="filter-status">
+              <option value="">すべて</option>
+              <option value="confirmed">確定</option>
+              <option value="pending">仮予約</option>
+              <option value="completed">完了</option>
+              <option value="cancelled">取消</option>
+              <option value="no_show">無断欠席</option>
+            </select>
+          </div>
+          <button class="btn btn-secondary" onclick="loadReservations()">絞り込み</button>
+        </div>
+
+        <div id="reservations-table">
+          <div class="loading">読み込み中...</div>
+        </div>
+
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 予約詳細/編集モーダル -->
+  <div class="modal-overlay" id="detail-modal" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>予約詳細</h3>
+        <button class="modal-close" onclick="closeModal('detail-modal')">×</button>
+      </div>
+      <div class="modal-body" id="detail-content"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('detail-modal')">閉じる</button>
+        <button class="btn btn-danger" id="cancel-btn" onclick="cancelReservation()">取消</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 代理予約作成モーダル -->
+  <div class="modal-overlay" id="create-modal" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <h3>代理予約（電話受付）</h3>
+        <button class="modal-close" onclick="closeModal('create-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>顧客氏名 *</label>
+          <input type="text" id="c-name" placeholder="山田 花子">
+        </div>
+        <div class="form-group">
+          <label>電話番号 *</label>
+          <input type="tel" id="c-phone" placeholder="03-1234-5678">
+        </div>
+        <div class="form-group">
+          <label>メールアドレス</label>
+          <input type="email" id="c-email">
+        </div>
+        <div class="form-group">
+          <label>メニュー *</label>
+          <select id="c-menu"></select>
+        </div>
+        <div class="form-group">
+          <label>スタッフ</label>
+          <select id="c-staff">
+            <option value="">指定なし</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>日時 *</label>
+          <input type="datetime-local" id="c-datetime">
+        </div>
+        <div class="form-group">
+          <label>備考</label>
+          <textarea id="c-notes" rows="2"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('create-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="createProxyReservation()">予約登録</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/admin-layout.js"></script>
+  <script>
+    const storeId = getStoreId();
+    let currentPage = 1;
+    let selectedReservationId = null;
+
+    async function loadReservations(page = 1) {
+      currentPage = page;
+      const from = document.getElementById("filter-from").value;
+      const to = document.getElementById("filter-to").value;
+      const staffId = document.getElementById("filter-staff").value;
+      const status = document.getElementById("filter-status").value;
+
+      let qs = `?page=${page}&limit=50`;
+      if (from) qs += `&date_from=${from}T00:00:00`;
+      if (to) qs += `&date_to=${to}T23:59:59`;
+      if (staffId) qs += `&staff_id=${staffId}`;
+      if (status) qs += `&status=${status}`;
+
+      const tableEl = document.getElementById("reservations-table");
+      tableEl.innerHTML = '<div class="loading">読み込み中...</div>';
+
+      try {
+        const data = await api.get(`/admin/stores/${storeId}/reservations${qs}`);
+        renderTable(data);
+      } catch (err) {
+        showToast(err.message, "error");
+        tableEl.innerHTML = '<div class="empty-state">読み込みに失敗しました</div>';
+      }
+    }
+
+    function renderTable(data) {
+      if (data.items.length === 0) {
+        document.getElementById("reservations-table").innerHTML =
+          '<div class="empty-state">予約がありません</div>';
+        document.getElementById("pagination").innerHTML = "";
+        return;
+      }
+
+      const rows = data.items.map(r => `
+        <tr style="cursor:pointer" onclick="showDetail('${r.id}')">
+          <td>${formatDateTime(r.start_datetime)}</td>
+          <td>${escapeHtml(r.customer_name || "-")}</td>
+          <td>${escapeHtml(r.staff_name || "-")}</td>
+          <td>${escapeHtml(r.menu_name || "-")}</td>
+          <td>${statusBadge(r.status)}</td>
+          <td>${r.confirmation_code || "-"}</td>
+          <td>${r.is_proxy ? "電話" : "LINE"}</td>
+        </tr>
+      `).join("");
+
+      document.getElementById("reservations-table").innerHTML = `
+        <table>
+          <thead><tr>
+            <th>日時</th><th>顧客</th><th>担当</th><th>メニュー</th>
+            <th>ステータス</th><th>予約番号</th><th>受付</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+
+      // ページネーション
+      const pagEl = document.getElementById("pagination");
+      pagEl.innerHTML = `
+        <span style="color:var(--gray-500)">合計 ${data.total} 件</span>
+        <button class="btn btn-sm btn-outline" ${currentPage <= 1 ? "disabled" : ""}
+          onclick="loadReservations(${currentPage - 1})">前へ</button>
+        <span>${currentPage} / ${Math.ceil(data.total / 50)}</span>
+        <button class="btn btn-sm btn-outline" ${!data.has_next ? "disabled" : ""}
+          onclick="loadReservations(${currentPage + 1})">次へ</button>
+      `;
+    }
+
+    async function showDetail(id) {
+      selectedReservationId = id;
+      document.getElementById("detail-content").innerHTML = '<div class="loading">読み込み中...</div>';
+      openModal("detail-modal");
+
+      try {
+        const r = await api.get(`/admin/stores/${storeId}/reservations/${id}`);
+        const cancelBtn = document.getElementById("cancel-btn");
+        cancelBtn.style.display = ["confirmed","pending"].includes(r.status) ? "inline-flex" : "none";
+
+        document.getElementById("detail-content").innerHTML = `
+          <table style="width:100%">
+            <tr><th style="width:120px">予約番号</th><td>${r.confirmation_code || "-"}</td></tr>
+            <tr><th>ステータス</th><td>${statusBadge(r.status)}</td></tr>
+            <tr><th>日時</th><td>${formatDateTime(r.start_datetime)} 〜 ${formatDateTime(r.end_datetime)}</td></tr>
+            <tr><th>顧客</th><td>${escapeHtml(r.customer_name || "-")}</td></tr>
+            <tr><th>担当</th><td>${escapeHtml(r.staff_name || "-")}</td></tr>
+            <tr><th>メニュー</th><td>${escapeHtml(r.menu_name || "-")}</td></tr>
+            <tr><th>備考</th><td>${escapeHtml(r.notes || "-")}</td></tr>
+            <tr><th>スタッフメモ</th><td>${escapeHtml(r.staff_notes || "-")}</td></tr>
+            <tr><th>受付方法</th><td>${r.is_proxy ? "電話代理登録" : "LINE"}</td></tr>
+            <tr><th>登録日時</th><td>${formatDateTime(r.created_at)}</td></tr>
+          </table>
+          <div style="margin-top:16px">
+            ${["confirmed","pending"].includes(r.status) ? `
+              <button class="btn btn-sm btn-outline" onclick="markNoShow('${r.id}')">無断欠席マーク</button>
+              <button class="btn btn-sm btn-outline" onclick="markCompleted('${r.id}')">完了にする</button>
+            ` : ""}
+          </div>
+        `;
+      } catch (err) {
+        document.getElementById("detail-content").innerHTML =
+          `<div class="empty-state">${err.message}</div>`;
+      }
+    }
+
+    async function cancelReservation() {
+      if (!selectedReservationId) return;
+      const reason = prompt("取消理由（任意）:");
+      if (reason === null) return; // キャンセルボタン
+
+      try {
+        await api.delete(`/admin/stores/${storeId}/reservations/${selectedReservationId}`, { reason });
+        showToast("予約を取消しました");
+        closeModal("detail-modal");
+        loadReservations(currentPage);
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    async function markNoShow(id) {
+      if (!confirm("無断欠席としてマークしますか？")) return;
+      try {
+        await api.patch(`/admin/stores/${storeId}/reservations/${id}/status`, null);
+        // URLにstatus=no_showを追加できないため直接fetch
+        await fetch(`/api/v1/admin/stores/${storeId}/reservations/${id}/status?new_status=no_show`, {
+          method: "PATCH",
+          headers: { "Authorization": `Bearer ${getToken()}` },
+        });
+        showToast("無断欠席としてマークしました");
+        closeModal("detail-modal");
+        loadReservations(currentPage);
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    async function markCompleted(id) {
+      await fetch(`/api/v1/admin/stores/${storeId}/reservations/${id}/status?new_status=completed`, {
+        method: "PATCH",
+        headers: { "Authorization": `Bearer ${getToken()}` },
+      });
+      showToast("完了としてマークしました");
+      closeModal("detail-modal");
+      loadReservations(currentPage);
+    }
+
+    async function createProxyReservation() {
+      const name = document.getElementById("c-name").value;
+      const phone = document.getElementById("c-phone").value;
+      const email = document.getElementById("c-email").value;
+      const menuId = document.getElementById("c-menu").value;
+      const staffId = document.getElementById("c-staff").value;
+      const dt = document.getElementById("c-datetime").value;
+      const notes = document.getElementById("c-notes").value;
+
+      if (!name || !phone || !menuId || !dt) {
+        showToast("必須項目を入力してください", "error");
+        return;
+      }
+
+      try {
+        await api.post(`/admin/stores/${storeId}/reservations`, {
+          customer_name: name,
+          customer_phone: phone,
+          customer_email: email || null,
+          menu_id: menuId,
+          staff_id: staffId || null,
+          start_datetime: new Date(dt).toISOString(),
+          notes,
+        });
+        showToast("代理予約を登録しました");
+        closeModal("create-modal");
+        loadReservations(1);
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    async function loadFilters() {
+      try {
+        const staffList = await api.get(`/admin/stores/${storeId}/staff`);
+        const staffSel = document.getElementById("filter-staff");
+        const cStaffSel = document.getElementById("c-staff");
+        staffList.forEach(s => {
+          [staffSel, cStaffSel].forEach(el => {
+            const opt = document.createElement("option");
+            opt.value = s.id;
+            opt.textContent = s.name;
+            el.appendChild(opt);
+          });
+        });
+
+        const menus = await api.get(`/admin/stores/${storeId}/menus`);
+        const menuSel = document.getElementById("c-menu");
+        menus.forEach(m => {
+          const opt = document.createElement("option");
+          opt.value = m.id;
+          opt.textContent = `${m.name} (${m.duration_minutes}分)`;
+          menuSel.appendChild(opt);
+        });
+      } catch (e) {}
+    }
+
+    // 今日をデフォルトフィルター
+    const today = new Date().toISOString().split("T")[0];
+    document.getElementById("filter-from").value = today;
+    document.getElementById("filter-to").value = today;
+
+    loadFilters();
+    loadReservations();
+  </script>
+</body>
+</html>

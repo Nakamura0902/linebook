@@ -1,0 +1,207 @@
+:root {
+  --line-green: #06c755;
+  --line-green-dark: #05b04c;
+}
+
+body {
+  max-width: 480px;
+  margin: 0 auto;
+  background: #f0f0f0;
+  min-height: 100vh;
+}
+
+.liff-header {
+  background: var(--line-green);
+  color: #fff;
+  padding: 16px;
+  text-align: center;
+  font-size: 16px;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.liff-content {
+  padding: 16px;
+}
+
+/* プログレスバー */
+.progress-bar {
+  display: flex;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background: #fff;
+  border-bottom: 1px solid var(--gray-200);
+  position: sticky;
+  top: 56px;
+  z-index: 99;
+}
+
+.progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  font-size: 11px;
+  color: var(--gray-400);
+}
+
+.progress-step .circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--gray-200);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.progress-step.active .circle,
+.progress-step.done .circle {
+  background: var(--line-green);
+  color: #fff;
+}
+
+.progress-step.active {
+  color: var(--gray-700);
+}
+
+/* カード選択 */
+.select-card {
+  background: #fff;
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-bottom: 8px;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.select-card:hover, .select-card.selected {
+  border-color: var(--line-green);
+}
+
+.select-card.selected {
+  background: #f0fff4;
+}
+
+.select-card .card-title { font-weight: 600; margin-bottom: 2px; }
+.select-card .card-sub { font-size: 12px; color: var(--gray-500); }
+
+/* カレンダー */
+.month-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+}
+
+.cal-day-header {
+  font-size: 11px;
+  color: var(--gray-500);
+  padding: 4px;
+}
+
+.cal-day {
+  padding: 6px 4px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  border: none;
+  background: none;
+}
+
+.cal-day:hover:not(:disabled) { background: var(--gray-100); }
+.cal-day.has-slots { color: var(--line-green); font-weight: 600; }
+.cal-day.selected { background: var(--line-green); color: #fff; }
+.cal-day:disabled { color: var(--gray-300); cursor: not-allowed; }
+
+/* 時間スロット */
+.slot-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.slot-btn {
+  padding: 10px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius);
+  background: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  text-align: center;
+  transition: all 0.15s;
+}
+
+.slot-btn:hover, .slot-btn.selected {
+  border-color: var(--line-green);
+  background: #f0fff4;
+  color: var(--line-green);
+  font-weight: 600;
+}
+
+/* 確認画面 */
+.confirm-row {
+  display: flex;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--gray-100);
+  font-size: 14px;
+}
+
+.confirm-row dt {
+  width: 100px;
+  color: var(--gray-500);
+  flex-shrink: 0;
+}
+
+/* フッターボタン */
+.liff-footer {
+  position: sticky;
+  bottom: 0;
+  background: #fff;
+  padding: 12px 16px;
+  border-top: 1px solid var(--gray-200);
+  display: flex;
+  gap: 8px;
+}
+
+.btn-line {
+  background: var(--line-green);
+  color: #fff;
+  flex: 1;
+  padding: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  border: none;
+  border-radius: var(--radius);
+  cursor: pointer;
+}
+
+.btn-line:hover { background: var(--line-green-dark); }
+.btn-line:disabled { opacity: 0.5; cursor: not-allowed; }
+.btn-back { background: var(--gray-200); color: var(--gray-700); padding: 14px 20px; border: none; border-radius: var(--radius); cursor: pointer; }
+
+.loading-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(255,255,255,0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  font-size: 16px;
+  color: var(--gray-500);
+}

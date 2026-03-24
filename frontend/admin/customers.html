@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>顧客管理 - LINE予約管理</title>
+  <link rel="stylesheet" href="../shared/css/base.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">LINE予約管理</div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html">ダッシュボード</a>
+        <a href="reservations.html">予約一覧</a>
+        <a href="calendar.html">カレンダー</a>
+        <a href="customers.html" class="active">顧客管理</a>
+        <a href="staff.html">スタッフ管理</a>
+        <a href="menus.html">メニュー管理</a>
+        <a href="settings.html">設定</a>
+      </nav>
+      <div class="sidebar-footer">
+        <span id="admin-name"></span>
+        <button class="btn btn-sm btn-outline" onclick="logout()">ログアウト</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1>顧客管理</h1>
+        <div class="page-actions">
+          <a class="btn btn-secondary" id="csv-link">CSV出力</a>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="filter-bar">
+          <div class="form-group">
+            <label>検索</label>
+            <input type="text" id="search" placeholder="氏名・電話番号・メール">
+          </div>
+          <div class="form-group">
+            <label>ブラックリスト</label>
+            <select id="filter-bl">
+              <option value="">すべて</option>
+              <option value="true">ブラックリスト</option>
+              <option value="false">通常</option>
+            </select>
+          </div>
+          <button class="btn btn-secondary" onclick="loadCustomers()">検索</button>
+        </div>
+
+        <div id="customers-table">
+          <div class="loading">読み込み中...</div>
+        </div>
+        <div class="pagination" id="pagination"></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 顧客詳細モーダル -->
+  <div class="modal-overlay" id="customer-modal" style="display:none">
+    <div class="modal" style="max-width:640px">
+      <div class="modal-header">
+        <h3>顧客詳細</h3>
+        <button class="modal-close" onclick="closeModal('customer-modal')">×</button>
+      </div>
+      <div class="modal-body" id="customer-detail-content"></div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('customer-modal')">閉じる</button>
+        <button class="btn btn-primary" onclick="saveCustomer()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/admin-layout.js"></script>
+  <script>
+    const storeId = getStoreId();
+    let currentPage = 1;
+    let editingCustomerId = null;
+
+    document.getElementById("csv-link").onclick = async () => {
+      const token = getToken();
+      const url = `/api/v1/admin/stores/${storeId}/customers/export`;
+      const res = await fetch(url, { headers: { "Authorization": `Bearer ${token}` } });
+      const blob = await res.blob();
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "customers.csv";
+      a.click();
+    };
+
+    async function loadCustomers(page = 1) {
+      currentPage = page;
+      const search = document.getElementById("search").value;
+      const bl = document.getElementById("filter-bl").value;
+
+      let qs = `?page=${page}&limit=50`;
+      if (search) qs += `&search=${encodeURIComponent(search)}`;
+      if (bl !== "") qs += `&is_blacklisted=${bl}`;
+
+      document.getElementById("customers-table").innerHTML = '<div class="loading">読み込み中...</div>';
+
+      try {
+        const data = await api.get(`/admin/stores/${storeId}/customers${qs}`);
+        renderTable(data);
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    function renderTable(data) {
+      if (data.items.length === 0) {
+        document.getElementById("customers-table").innerHTML =
+          '<div class="empty-state">顧客が見つかりません</div>';
+        return;
+      }
+
+      const rows = data.items.map(c => `
+        <tr style="cursor:pointer" onclick="showCustomer('${c.id}')">
+          <td>${escapeHtml(c.name || "-")}</td>
+          <td>${escapeHtml(c.phone || "-")}</td>
+          <td class="hide-mobile">${escapeHtml(c.email || "-")}</td>
+          <td>${c.visit_count}</td>
+          <td>${c.cancel_count} / ${c.no_show_count}</td>
+          <td>${c.is_first_visit ? "初回" : "再来"}</td>
+          <td>${c.is_blacklisted ? '<span class="badge badge-cancelled">BL</span>' : ""}</td>
+        </tr>
+      `).join("");
+
+      document.getElementById("customers-table").innerHTML = `
+        <table>
+          <thead><tr>
+            <th>氏名</th><th>電話番号</th><th class="hide-mobile">メール</th>
+            <th>来店数</th><th>C/NS</th><th>区分</th><th>BL</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      `;
+
+      document.getElementById("pagination").innerHTML = `
+        <span style="color:var(--gray-500)">合計 ${data.total} 件</span>
+        <button class="btn btn-sm btn-outline" ${currentPage <= 1 ? "disabled" : ""}
+          onclick="loadCustomers(${currentPage - 1})">前へ</button>
+        <span>${currentPage}</span>
+        <button class="btn btn-sm btn-outline" ${!data.has_next ? "disabled" : ""}
+          onclick="loadCustomers(${currentPage + 1})">次へ</button>
+      `;
+    }
+
+    async function showCustomer(id) {
+      editingCustomerId = id;
+      openModal("customer-modal");
+      document.getElementById("customer-detail-content").innerHTML = '<div class="loading">読み込み中...</div>';
+
+      try {
+        const data = await api.get(`/admin/stores/${storeId}/customers/${id}`);
+        const c = data.customer;
+        const recentRes = data.recent_reservations;
+
+        const recentRows = recentRes.map(r => `
+          <tr>
+            <td>${formatDate(r.start_datetime)}</td>
+            <td>${escapeHtml(r.menu_name || "-")}</td>
+            <td>${escapeHtml(r.staff_name || "-")}</td>
+            <td>${statusBadge(r.status)}</td>
+          </tr>
+        `).join("");
+
+        document.getElementById("customer-detail-content").innerHTML = `
+          <div class="form-group">
+            <label>氏名</label>
+            <input type="text" id="edit-name" value="${c.name || ""}">
+          </div>
+          <div class="form-group">
+            <label>ふりがな</label>
+            <input type="text" id="edit-kana" value="${c.name_kana || ""}">
+          </div>
+          <div class="form-group">
+            <label>電話番号</label>
+            <input type="tel" id="edit-phone" value="${c.phone || ""}">
+          </div>
+          <div class="form-group">
+            <label>メモ</label>
+            <textarea id="edit-memo">${c.memo || ""}</textarea>
+          </div>
+          <div class="form-group">
+            <label>タグ（カンマ区切り）</label>
+            <input type="text" id="edit-tags" value="${(c.tags || []).join(",")}">
+          </div>
+          <div class="form-group">
+            <label>
+              <input type="checkbox" id="edit-bl" ${c.is_blacklisted ? "checked" : ""}>
+              ブラックリスト
+            </label>
+            <input type="text" id="edit-bl-reason" placeholder="理由" value="${c.blacklist_reason || ""}">
+          </div>
+          <h4 style="margin:16px 0 8px">来店履歴（直近）</h4>
+          ${recentRows ? `<table><thead><tr><th>日付</th><th>メニュー</th><th>担当</th><th>ステータス</th></tr></thead><tbody>${recentRows}</tbody></table>` : "<p>履歴なし</p>"}
+        `;
+      } catch (err) {
+        document.getElementById("customer-detail-content").innerHTML =
+          `<div class="empty-state">${err.message}</div>`;
+      }
+    }
+
+    async function saveCustomer() {
+      if (!editingCustomerId) return;
+      const isBlacklisted = document.getElementById("edit-bl").checked;
+      const tagsRaw = document.getElementById("edit-tags").value;
+
+      try {
+        await api.put(`/admin/stores/${storeId}/customers/${editingCustomerId}`, {
+          name: document.getElementById("edit-name").value || null,
+          name_kana: document.getElementById("edit-kana").value || null,
+          phone: document.getElementById("edit-phone").value || null,
+          memo: document.getElementById("edit-memo").value || null,
+          tags: tagsRaw ? tagsRaw.split(",").map(t => t.trim()).filter(t => t) : [],
+        });
+
+        await api.patch(`/admin/stores/${storeId}/customers/${editingCustomerId}/blacklist`, {
+          is_blacklisted: isBlacklisted,
+          reason: document.getElementById("edit-bl-reason").value || null,
+        });
+
+        showToast("保存しました");
+        closeModal("customer-modal");
+        loadCustomers(currentPage);
+      } catch (err) {
+        showToast(err.message, "error");
+      }
+    }
+
+    function escapeHtml(str) {
+      const div = document.createElement("div");
+      div.textContent = str;
+      return div.innerHTML;
+    }
+
+    document.getElementById("search").addEventListener("keydown", e => {
+      if (e.key === "Enter") loadCustomers();
+    });
+
+    loadCustomers();
+  </script>
+</body>
+</html>
