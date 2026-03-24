@@ -124,5 +124,8 @@ async def health():
 # フロントエンド静的ファイルの配信（Renderでフロントとバックを同一サービスにする場合）
 frontend_dir = os.path.join(os.path.dirname(__file__), "..", "..", "frontend")
 if os.path.exists(frontend_dir):
+    shared_dir = os.path.join(frontend_dir, "shared")
+    if os.path.exists(shared_dir):
+        app.mount("/shared", StaticFiles(directory=shared_dir), name="shared")
     app.mount("/admin", StaticFiles(directory=os.path.join(frontend_dir, "admin"), html=True), name="admin")
     app.mount("/liff", StaticFiles(directory=os.path.join(frontend_dir, "liff"), html=True), name="liff")
