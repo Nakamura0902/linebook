@@ -33,6 +33,22 @@ async def lifespan(app: FastAPI):
     # テーブルを自動作成
     Base.metadata.create_all(bind=engine)
 
+    # 初期データが空ならseedを実行
+    try:
+        from .database import SessionLocal
+        from .models.tenant import Tenant
+        db = SessionLocal()
+        if not db.query(Tenant).first():
+            logger.info("No seed data found, running seed...")
+            import sys, os
+            sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            from seed import seed
+            seed()
+            logger.info("Seed complete")
+        db.close()
+    except Exception as e:
+        logger.error(f"Seed check failed: {e}")
+
     # APSchedulerによるリマインドバッチ
     if settings.scheduler_enabled:
         from apscheduler.schedulers.asyncio import AsyncIOScheduler
