@@ -4,12 +4,7 @@ services:
     env: python
     region: singapore
     plan: free
-    buildCommand: |
-      cd backend
-      pip install -r requirements.txt
-      pip install eval_type_backport "bcrypt==4.0.1"
-      alembic upgrade head
-      python seed.py
+    buildCommand: cd backend && pip install -r requirements.txt && alembic upgrade head && python seed.py
     startCommand: cd backend && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
     envVars:
