@@ -1,8 +1,10 @@
+/* ─── レイアウト ─── */
 .layout {
   display: flex;
   min-height: 100vh;
 }
 
+/* ─── サイドバー ─── */
 .sidebar {
   width: 220px;
   background: #1e1b4b;
@@ -13,6 +15,8 @@
   position: sticky;
   top: 0;
   height: 100vh;
+  transition: transform 0.25s ease;
+  z-index: 200;
 }
 
 .sidebar-brand {
@@ -31,7 +35,7 @@
 
 .sidebar-nav a {
   display: block;
-  padding: 10px 16px;
+  padding: 11px 16px;
   color: #c7d2fe;
   font-size: 14px;
   text-decoration: none;
@@ -40,8 +44,9 @@
   transition: background 0.15s, color 0.15s;
 }
 
-.sidebar-nav a:hover, .sidebar-nav a.active {
-  background: rgba(255,255,255,0.1);
+.sidebar-nav a:hover,
+.sidebar-nav a.active {
+  background: rgba(255,255,255,0.12);
   color: #fff;
 }
 
@@ -54,16 +59,21 @@
   gap: 8px;
 }
 
+/* ─── メインコンテンツ ─── */
 .main-content {
   flex: 1;
   padding: 24px;
-  overflow-x: auto;
+  overflow-x: hidden;
+  min-width: 0;
 }
 
+/* ─── ページヘッダー ─── */
 .page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
   margin-bottom: 24px;
 }
 
@@ -75,11 +85,13 @@
 .page-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
+/* ─── 統計カード ─── */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 16px;
 }
 
@@ -99,6 +111,7 @@
   color: var(--primary);
 }
 
+/* ─── フィルターバー ─── */
 .filter-bar {
   display: flex;
   gap: 12px;
@@ -109,45 +122,224 @@
 
 .filter-bar .form-group {
   margin-bottom: 0;
-  min-width: 140px;
+  flex: 1;
+  min-width: 120px;
 }
 
-.filter-bar input, .filter-bar select {
-  width: auto;
-  min-width: 140px;
+.filter-bar input,
+.filter-bar select {
+  width: 100%;
 }
 
+/* ─── ページネーション ─── */
 .pagination {
   display: flex;
   gap: 8px;
   align-items: center;
   justify-content: flex-end;
   margin-top: 16px;
+  flex-wrap: wrap;
 }
 
-/* レスポンシブ: スマホ対応 */
+/* ─── テーブル: モバイルでスクロール ─── */
+.table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+/* ─── モバイルヘッダー（JS で挿入） ─── */
+.mobile-header {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 56px;
+  background: #1e1b4b;
+  color: #fff;
+  align-items: center;
+  padding: 0 16px;
+  gap: 12px;
+  z-index: 210;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.mobile-brand {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.hamburger {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex-shrink: 0;
+}
+
+.hamburger span {
+  display: block;
+  width: 22px;
+  height: 2px;
+  background: #fff;
+  border-radius: 2px;
+  transition: transform 0.2s, opacity 0.2s;
+}
+
+body.sidebar-open .hamburger span:nth-child(1) {
+  transform: translateY(7px) rotate(45deg);
+}
+body.sidebar-open .hamburger span:nth-child(2) {
+  opacity: 0;
+}
+body.sidebar-open .hamburger span:nth-child(3) {
+  transform: translateY(-7px) rotate(-45deg);
+}
+
+/* ─── オーバーレイ（JS で挿入） ─── */
+.sidebar-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 199;
+}
+
+/* ─── モバイル ─── */
 @media (max-width: 768px) {
-  .sidebar {
-    width: 100%;
-    height: auto;
-    position: relative;
-    flex-direction: row;
-    flex-wrap: wrap;
+  .mobile-header {
+    display: flex;
   }
+
   .layout {
     flex-direction: column;
   }
-  .sidebar-nav {
-    display: flex;
-    flex-direction: row;
-    overflow-x: auto;
-    padding: 4px 0;
+
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    transform: translateX(-100%);
+    width: 240px;
   }
-  .sidebar-nav a {
-    white-space: nowrap;
-    padding: 8px 12px;
+
+  body.sidebar-open .sidebar {
+    transform: translateX(0);
   }
+
+  body.sidebar-open .sidebar-overlay {
+    display: block;
+  }
+
   .main-content {
     padding: 16px;
+    padding-top: 72px;
+  }
+
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
+  }
+
+  .stat-value {
+    font-size: 22px;
+  }
+
+  .page-header h1 {
+    font-size: 17px;
+  }
+
+  /* テーブルをカードスタイルへ変換 */
+  table thead {
+    display: none;
+  }
+
+  table, table tbody, table tr, table td {
+    display: block;
+    width: 100%;
+  }
+
+  table tr {
+    background: #fff;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    padding: 12px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.07);
+    position: relative;
+  }
+
+  table td {
+    padding: 4px 0;
+    font-size: 13px;
+    border: none;
+  }
+
+  table td:first-child {
+    font-weight: 600;
+    font-size: 14px;
+    margin-bottom: 4px;
+  }
+
+  table td[style*="display:flex"],
+  table td[style*="display: flex"] {
+    display: flex !important;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 8px;
+  }
+
+  /* モーダルを全画面に */
+  .modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    margin: 0;
+    border-radius: 16px 16px 0 0;
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-overlay {
+    align-items: flex-end !important;
+  }
+
+  .filter-bar {
+    flex-direction: column;
+  }
+
+  .filter-bar .form-group {
+    width: 100%;
+  }
+
+  .page-actions {
+    width: 100%;
+  }
+
+  .page-actions .btn {
+    flex: 1;
+    text-align: center;
+  }
+}
+
+/* ─── デスクトップ ─── */
+@media (min-width: 769px) {
+  .mobile-header {
+    display: none !important;
+  }
+
+  .sidebar-overlay {
+    display: none !important;
+  }
+
+  body.sidebar-open .sidebar {
+    transform: none;
   }
 }

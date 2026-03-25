@@ -1,8 +1,19 @@
 from __future__ import annotations
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
+import re
+
+
+def _parse_dt(s: str) -> datetime:
+    """FullCalendar が送る ISO 文字列（Z付き含む）をパース → UTC aware datetime"""
+    s = re.sub(r"Z$", "+00:00", s)
+    # +HH:MM 形式がない場合はUTC naive として扱う
+    dt = datetime.fromisoformat(s)
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt
 
 from ...database import get_db
 from ...models.admin import AdminUser
@@ -26,11 +37,14 @@ async def get_calendar_events(
     """カレンダー表示用: 指定期間の予約一覧をFullCalendar形式で返す"""
     require_store_access(store_id, admin, db)
 
+    from_dt = _parse_dt(date_from)
+    to_dt = _parse_dt(date_to)
+
     reservations = db.query(Reservation).filter(
         Reservation.store_id == store_id,
         Reservation.status.notin_(["cancelled"]),
-        Reservation.start_datetime >= datetime.fromisoformat(date_from),
-        Reservation.start_datetime <= datetime.fromisoformat(date_to),
+        Reservation.start_datetime >= from_dt,
+        Reservation.start_datetime < to_dt,
     ).all()
 
     STATUS_COLORS = {
