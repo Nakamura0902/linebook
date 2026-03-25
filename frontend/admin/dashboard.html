@@ -76,12 +76,31 @@
       const todayStr = today.toISOString().split("T")[0];
       const todayEnd = `${todayStr}T23:59:59`;
 
-      // 今日の予約
-      const todayRes = await api.get(
-        `/admin/stores/${storeId}/reservations?date_from=${todayStr}T00:00:00&date_to=${todayEnd}&limit=100`
-      );
+      // 今週の範囲（月〜日）
+      const weekStart = new Date(today);
+      weekStart.setDate(today.getDate() - ((today.getDay() + 6) % 7));
+      weekStart.setHours(0, 0, 0, 0);
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekStart.getDate() + 6);
+      weekEnd.setHours(23, 59, 59);
+
+      // 今月の範囲
+      const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+      const monthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0, 23, 59, 59);
+
+      const fmt = d => d.toISOString().replace(".000Z","");
+
+      const [todayRes, weekRes, monthRes, custRes] = await Promise.all([
+        api.get(`/admin/stores/${storeId}/reservations?date_from=${todayStr}T00:00:00&date_to=${todayEnd}&limit=100`),
+        api.get(`/admin/stores/${storeId}/reservations?date_from=${fmt(weekStart)}&date_to=${fmt(weekEnd)}&limit=1`),
+        api.get(`/admin/stores/${storeId}/reservations?date_from=${fmt(monthStart)}&date_to=${fmt(monthEnd)}&limit=1`),
+        api.get(`/admin/stores/${storeId}/customers?limit=1`),
+      ]);
 
       document.getElementById("today-count").textContent = todayRes.total;
+      document.getElementById("week-count").textContent = weekRes.total;
+      document.getElementById("month-count").textContent = monthRes.total;
+      document.getElementById("customer-count").textContent = custRes.total;
 
       if (todayRes.items.length === 0) {
         document.getElementById("today-reservations").innerHTML =

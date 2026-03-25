@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>メニュー管理 - LINE予約管理</title>
+  <link rel="stylesheet" href="../shared/css/base.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">LINE予約管理</div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html">ダッシュボード</a>
+        <a href="reservations.html">予約一覧</a>
+        <a href="calendar.html">カレンダー</a>
+        <a href="customers.html">顧客管理</a>
+        <a href="staff.html">スタッフ管理</a>
+        <a href="menus.html" class="active">メニュー管理</a>
+        <a href="settings.html">設定</a>
+      </nav>
+      <div class="sidebar-footer">
+        <span id="admin-name"></span>
+        <button class="btn btn-sm btn-outline" onclick="logout()">ログアウト</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1>メニュー管理</h1>
+        <div class="page-actions">
+          <button class="btn btn-secondary" onclick="openCatModal()">カテゴリ追加</button>
+          <button class="btn btn-primary" onclick="openAddModal()">＋ メニュー追加</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="menus-table"><div class="loading">読み込み中...</div></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- メニュー追加・編集モーダル -->
+  <div class="modal-overlay" id="menu-modal" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">メニュー追加</h3>
+        <button class="modal-close" onclick="closeModal('menu-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-id">
+        <div class="form-group">
+          <label>メニュー名 <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="f-name" placeholder="カット">
+        </div>
+        <div class="form-group">
+          <label>カテゴリ</label>
+          <select id="f-category"></select>
+        </div>
+        <div class="form-group">
+          <label>所要時間（分） <span style="color:var(--danger)">*</span></label>
+          <input type="number" id="f-duration" min="15" step="15" value="60">
+        </div>
+        <div class="form-group">
+          <label>料金（円）</label>
+          <input type="number" id="f-price" min="0" step="100" placeholder="5000">
+        </div>
+        <div class="form-group">
+          <label>説明</label>
+          <textarea id="f-desc" placeholder="メニューの説明（任意）"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('menu-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveMenu()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- カテゴリ追加モーダル -->
+  <div class="modal-overlay" id="cat-modal" style="display:none">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-header">
+        <h3>カテゴリ追加</h3>
+        <button class="modal-close" onclick="closeModal('cat-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>カテゴリ名 <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="cat-name" placeholder="カット">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('cat-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveCategory()">追加</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/admin-layout.js"></script>
+  <script>
+    const storeId = getStoreId();
+    let categories = [];
+
+    async function loadAll() {
+      [categories] = await Promise.all([
+        api.get(`/admin/stores/${storeId}/menu-categories`),
+      ]);
+      await loadMenus();
+    }
+
+    async function loadMenus() {
+      const menus = await api.get(`/admin/stores/${storeId}/menus`);
+      const el = document.getElementById("menus-table");
+      if (!menus.length) {
+        el.innerHTML = '<div class="empty-state">メニューが登録されていません</div>';
+        return;
+      }
+      el.innerHTML = `
+        <table>
+          <thead><tr><th>メニュー名</th><th>カテゴリ</th><th>所要時間</th><th>料金</th><th>状態</th><th></th></tr></thead>
+          <tbody>
+            ${menus.map(m => `
+              <tr style="${!m.is_active ? 'opacity:0.5' : ''}">
+                <td><strong>${m.name}</strong>${m.description ? `<br><small style="color:var(--gray-500)">${m.description}</small>` : ''}</td>
+                <td>${m.category_name || '-'}</td>
+                <td>${m.duration_minutes}分</td>
+                <td>${m.price != null ? '¥' + m.price.toLocaleString() : '-'}</td>
+                <td><span class="badge ${m.is_active ? 'badge-confirmed' : 'badge-cancelled'}">${m.is_active ? '有効' : '無効'}</span></td>
+                <td style="display:flex;gap:6px">
+                  <button class="btn btn-sm btn-outline" onclick='openEditModal(${JSON.stringify(m)})'>編集</button>
+                  <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="toggleActive('${m.id}', ${m.is_active})">${m.is_active ? '無効化' : '有効化'}</button>
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function fillCategorySelect(selectedId) {
+      const sel = document.getElementById("f-category");
+      sel.innerHTML = '<option value="">未設定</option>' +
+        categories.map(c => `<option value="${c.id}" ${c.id === selectedId ? 'selected' : ''}>${c.name}</option>`).join("");
+    }
+
+    function openAddModal() {
+      document.getElementById("modal-title").textContent = "メニュー追加";
+      document.getElementById("edit-id").value = "";
+      document.getElementById("f-name").value = "";
+      document.getElementById("f-duration").value = "60";
+      document.getElementById("f-price").value = "";
+      document.getElementById("f-desc").value = "";
+      fillCategorySelect("");
+      openModal("menu-modal");
+    }
+
+    function openEditModal(m) {
+      document.getElementById("modal-title").textContent = "メニュー編集";
+      document.getElementById("edit-id").value = m.id;
+      document.getElementById("f-name").value = m.name || "";
+      document.getElementById("f-duration").value = m.duration_minutes || 60;
+      document.getElementById("f-price").value = m.price != null ? m.price : "";
+      document.getElementById("f-desc").value = m.description || "";
+      fillCategorySelect(m.category_id);
+      openModal("menu-modal");
+    }
+
+    async function saveMenu() {
+      const id = document.getElementById("edit-id").value;
+      const price = document.getElementById("f-price").value;
+      const body = {
+        name: document.getElementById("f-name").value.trim(),
+        category_id: document.getElementById("f-category").value || null,
+        duration_minutes: parseInt(document.getElementById("f-duration").value),
+        price: price !== "" ? parseInt(price) : null,
+        description: document.getElementById("f-desc").value.trim() || null,
+      };
+      if (!body.name) { alert("メニュー名を入力してください"); return; }
+      try {
+        if (id) {
+          await api.put(`/admin/stores/${storeId}/menus/${id}`, body);
+        } else {
+          await api.post(`/admin/stores/${storeId}/menus`, body);
+        }
+        closeModal("menu-modal");
+        showToast("保存しました");
+        loadMenus();
+      } catch(e) { showToast(e.message, "error"); }
+    }
+
+    async function toggleActive(id, current) {
+      try {
+        if (current) {
+          await api.delete(`/admin/stores/${storeId}/menus/${id}`);
+        } else {
+          await api.put(`/admin/stores/${storeId}/menus/${id}`, { is_active: true });
+        }
+        showToast(current ? "無効化しました" : "有効化しました");
+        loadMenus();
+      } catch(e) { showToast(e.message, "error"); }
+    }
+
+    function openCatModal() {
+      document.getElementById("cat-name").value = "";
+      openModal("cat-modal");
+    }
+
+    async function saveCategory() {
+      const name = document.getElementById("cat-name").value.trim();
+      if (!name) { alert("カテゴリ名を入力してください"); return; }
+      try {
+        await api.post(`/admin/stores/${storeId}/menu-categories`, { name });
+        closeModal("cat-modal");
+        showToast("カテゴリを追加しました");
+        loadAll();
+      } catch(e) { showToast(e.message, "error"); }
+    }
+
+    loadAll().catch(e => showToast(e.message, "error"));
+  </script>
+</body>
+</html>

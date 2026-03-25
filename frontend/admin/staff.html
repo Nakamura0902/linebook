@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>スタッフ管理 - LINE予約管理</title>
+  <link rel="stylesheet" href="../shared/css/base.css">
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">LINE予約管理</div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html">ダッシュボード</a>
+        <a href="reservations.html">予約一覧</a>
+        <a href="calendar.html">カレンダー</a>
+        <a href="customers.html">顧客管理</a>
+        <a href="staff.html" class="active">スタッフ管理</a>
+        <a href="menus.html">メニュー管理</a>
+        <a href="settings.html">設定</a>
+      </nav>
+      <div class="sidebar-footer">
+        <span id="admin-name"></span>
+        <button class="btn btn-sm btn-outline" onclick="logout()">ログアウト</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1>スタッフ管理</h1>
+        <div class="page-actions">
+          <button class="btn btn-primary" onclick="openAddModal()">＋ スタッフ追加</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="staff-table"><div class="loading">読み込み中...</div></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 追加・編集モーダル -->
+  <div class="modal-overlay" id="staff-modal" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">スタッフ追加</h3>
+        <button class="modal-close" onclick="closeModal('staff-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-id">
+        <div class="form-group">
+          <label>名前 <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="f-name" placeholder="田中 花子">
+        </div>
+        <div class="form-group">
+          <label>役割</label>
+          <input type="text" id="f-role" placeholder="スタイリスト">
+        </div>
+        <div class="form-group">
+          <label>性別</label>
+          <select id="f-gender">
+            <option value="">未設定</option>
+            <option value="male">男性</option>
+            <option value="female">女性</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>自己紹介</label>
+          <textarea id="f-bio" placeholder="担当スタッフの紹介文"></textarea>
+        </div>
+        <div class="form-group">
+          <label>
+            <input type="checkbox" id="f-assignable" checked> 指名可能
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('staff-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveStaff()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js"></script>
+  <script src="js/admin-layout.js"></script>
+  <script>
+    const storeId = getStoreId();
+
+    async function loadStaff() {
+      const list = await api.get(`/admin/stores/${storeId}/staff`);
+      const el = document.getElementById("staff-table");
+      if (!list.length) {
+        el.innerHTML = '<div class="empty-state">スタッフが登録されていません</div>';
+        return;
+      }
+      el.innerHTML = `
+        <table>
+          <thead><tr><th>名前</th><th>役割</th><th>性別</th><th>指名</th><th>状態</th><th></th></tr></thead>
+          <tbody>
+            ${list.map(s => `
+              <tr style="${!s.is_active ? 'opacity:0.5' : ''}">
+                <td><strong>${s.name}</strong></td>
+                <td>${s.role || '-'}</td>
+                <td>${s.gender === 'male' ? '男性' : s.gender === 'female' ? '女性' : '-'}</td>
+                <td>${s.is_assignable ? '✓' : '-'}</td>
+                <td><span class="badge ${s.is_active ? 'badge-confirmed' : 'badge-cancelled'}">${s.is_active ? '有効' : '無効'}</span></td>
+                <td style="display:flex;gap:6px">
+                  <button class="btn btn-sm btn-outline" onclick='openEditModal(${JSON.stringify(s)})'>編集</button>
+                  <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="toggleActive('${s.id}', ${s.is_active})">${s.is_active ? '無効化' : '有効化'}</button>
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function openAddModal() {
+      document.getElementById("modal-title").textContent = "スタッフ追加";
+      document.getElementById("edit-id").value = "";
+      document.getElementById("f-name").value = "";
+      document.getElementById("f-role").value = "";
+      document.getElementById("f-gender").value = "";
+      document.getElementById("f-bio").value = "";
+      document.getElementById("f-assignable").checked = true;
+      openModal("staff-modal");
+    }
+
+    function openEditModal(s) {
+      document.getElementById("modal-title").textContent = "スタッフ編集";
+      document.getElementById("edit-id").value = s.id;
+      document.getElementById("f-name").value = s.name || "";
+      document.getElementById("f-role").value = s.role || "";
+      document.getElementById("f-gender").value = s.gender || "";
+      document.getElementById("f-bio").value = s.bio || "";
+      document.getElementById("f-assignable").checked = s.is_assignable;
+      openModal("staff-modal");
+    }
+
+    async function saveStaff() {
+      const id = document.getElementById("edit-id").value;
+      const body = {
+        name: document.getElementById("f-name").value.trim(),
+        role: document.getElementById("f-role").value.trim() || null,
+        gender: document.getElementById("f-gender").value || null,
+        bio: document.getElementById("f-bio").value.trim() || null,
+        is_assignable: document.getElementById("f-assignable").checked,
+      };
+      if (!body.name) { alert("名前を入力してください"); return; }
+      try {
+        if (id) {
+          await api.put(`/admin/stores/${storeId}/staff/${id}`, body);
+        } else {
+          await api.post(`/admin/stores/${storeId}/staff`, body);
+        }
+        closeModal("staff-modal");
+        showToast("保存しました");
+        loadStaff();
+      } catch(e) { showToast(e.message, "error"); }
+    }
+
+    async function toggleActive(id, current) {
+      try {
+        await api.put(`/admin/stores/${storeId}/staff/${id}`, { is_active: !current });
+        showToast(current ? "無効化しました" : "有効化しました");
+        loadStaff();
+      } catch(e) { showToast(e.message, "error"); }
+    }
+
+    loadStaff().catch(e => showToast(e.message, "error"));
+  </script>
+</body>
+</html>
