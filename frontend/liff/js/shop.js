@@ -1,4 +1,11 @@
 // EC ショップ LIFF アプリ
+
+function escapeHtml(str) {
+  if (!str) return "";
+  const d = document.createElement("div");
+  d.textContent = str;
+  return d.innerHTML;
+}
 const shopState = {
   storeId: null,
   customer: null,
