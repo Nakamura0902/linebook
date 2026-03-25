@@ -301,7 +301,7 @@ async function renderProductDetail(productId) {
               <div class="staff-comment-text">${escapeHtml(p.staff_comment)}</div>
             </div>
           ` : ""}
-          ${p.description ? `<p style="font-size:14px;color:rgba(240,230,255,0.7);line-height:1.75">${escapeHtml(p.description)}</p>` : ""}
+          ${p.description ? `<p style="font-size:14px;color:#495057;line-height:1.75">${escapeHtml(p.description)}</p>` : ""}
         </div>
       </div>
       <a href="${escapeHtml(p.external_url)}" target="_blank" class="btn-buy"
