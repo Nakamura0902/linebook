@@ -22,13 +22,6 @@ const TOTAL_STEPS = 5;
 window.addEventListener("DOMContentLoaded", async () => {
   state.storeId = getStoreId();
 
-  // ページルーティング: liff.init前にliff.stateから判定
-  const page = getPageParam();
-  if (page === "my-reservations") {
-    location.replace(`my-reservations.html${state.storeId ? "?store_id=" + state.storeId : ""}`);
-    return;
-  }
-
   if (!state.storeId) {
     showError("店舗IDが指定されていません");
     return;
@@ -37,6 +30,13 @@ window.addEventListener("DOMContentLoaded", async () => {
   try {
     const ready = await initLiff();
     if (!ready) return;
+
+    // liff.init後にURLパラメータが確定してから判定
+    const page = getPageParam();
+    if (page === "my-reservations") {
+      await renderReservationsMode();
+      return;
+    }
 
     const [store, menus, staffList] = await Promise.all([
       liffApi.get(`/liff/stores/${state.storeId}`),
@@ -63,6 +63,114 @@ window.addEventListener("DOMContentLoaded", async () => {
     showError(err.message);
   }
 });
+
+// ──────────── 予約確認モード ────────────
+
+async function renderReservationsMode() {
+  // ヘッダーと進捗バーを予約確認用に変更
+  const header = document.getElementById("store-name");
+  header.textContent = "予約確認";
+  header.style.background = "linear-gradient(135deg, #667eea 0%, #764ba2 100%)";
+  header.style.boxShadow = "0 2px 12px rgba(102,126,234,0.35)";
+
+  document.querySelector(".progress-bar").style.display = "none";
+
+  const footer = document.querySelector(".liff-footer");
+  footer.innerHTML = `
+    <button class="btn-line" onclick="liff.closeWindow()" style="background:linear-gradient(135deg,#667eea,#764ba2);box-shadow:0 4px 14px rgba(102,126,234,0.35)">LINEに戻る</button>
+  `;
+
+  const content = document.getElementById("content");
+
+  try {
+    const customerData = await liffApi.post(
+      `/liff/customers/identify?store_id=${state.storeId}`, {}
+    );
+    const customer = customerData.customer;
+    const reservations = await liffApi.get(`/liff/customers/${customer.id}/reservations`);
+
+    document.getElementById("loading-overlay").style.display = "none";
+
+    if (!reservations.length) {
+      content.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">📅</div>
+          <div class="empty-title">予約がありません</div>
+          <div class="empty-sub">新しい予約を作成してみましょう</div>
+        </div>
+      `;
+      return;
+    }
+
+    const now = new Date();
+    const upcoming = reservations.filter(r =>
+      ["confirmed","pending"].includes(r.status) && new Date(r.start_datetime) >= now
+    );
+    const past = reservations.filter(r =>
+      !upcoming.includes(r)
+    );
+
+    let html = "";
+    if (upcoming.length) {
+      html += `<div class="res-section-title">直近の予約</div>`;
+      html += upcoming.map(r => renderResCard(r, false)).join("");
+    }
+    if (past.length) {
+      html += `<div class="res-section-title">過去の予約</div>`;
+      html += past.map(r => renderResCard(r, true)).join("");
+    }
+    content.innerHTML = html;
+
+  } catch (err) {
+    document.getElementById("loading-overlay").style.display = "none";
+    showError(err.message);
+  }
+}
+
+function renderResCard(r, isPast) {
+  const statusMap = {
+    confirmed: { label: "確定",    cls: "confirmed" },
+    pending:   { label: "確認待ち", cls: "pending"   },
+    cancelled: { label: "取消済み", cls: "cancelled" },
+    completed: { label: "完了",    cls: "completed" },
+    no_show:   { label: "無断欠席", cls: "no_show"   },
+  };
+  const s = statusMap[r.status] || { label: r.status, cls: "completed" };
+  const cardCls = isPast ? (r.status === "cancelled" ? "cancelled" : "past") : "";
+  const canCancel = ["confirmed","pending"].includes(r.status) && new Date(r.start_datetime) >= new Date();
+
+  return `
+    <div class="reservation-card ${cardCls}">
+      <div class="res-header">
+        <div>
+          <div class="res-date">${formatDateJa(r.start_datetime)}</div>
+          <div class="res-time">${formatTime(r.start_datetime)}</div>
+        </div>
+        <span class="res-badge ${s.cls}">${s.label}</span>
+      </div>
+      <div class="res-detail">
+        ${r.menu_name ? `<strong>${escapeHtml(r.menu_name)}</strong>` : ""}
+        ${r.staff_name ? ` · ${escapeHtml(r.staff_name)}` : " · 指名なし"}
+      </div>
+      <div class="res-code">予約番号: ${r.confirmation_code || "—"}</div>
+      ${canCancel ? `
+        <div class="res-actions" style="margin-top:12px">
+          <button class="btn-cancel" onclick="cancelReservation('${r.id}')">取消する</button>
+        </div>
+      ` : ""}
+    </div>
+  `;
+}
+
+async function cancelReservation(reservationId) {
+  if (!confirm("予約を取消しますか？")) return;
+  try {
+    await liffApi.delete(`/liff/reservations/${reservationId}`, { reason: null });
+    await renderReservationsMode();
+  } catch (err) {
+    alert(err.message);
+  }
+}
 
 // ──────────── ステップ制御 ────────────
 
