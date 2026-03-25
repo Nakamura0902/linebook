@@ -9,6 +9,8 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..models.store import Store
 from ..services.line_service import reply_line_message, build_booking_flex_message
+from ..models.customer import Customer
+from ..services.faq_bot import handle_faq_message
 from ..config import settings
 from ..core.logging import logger
 
@@ -56,12 +58,12 @@ async def line_webhook(
     liff_id = store.liff_id or settings.line_liff_id
 
     for event in payload.get("events", []):
-        await _process_event(event, store, access_token, liff_id)
+        await _process_event(event, store, access_token, liff_id, db)
 
     return {"status": "ok"}
 
 
-async def _process_event(event: dict, store: Store, access_token: str, liff_id: str):
+async def _process_event(event: dict, store: Store, access_token: str, liff_id: str, db: Session):
     event_type = event.get("type")
     reply_token = event.get("replyToken")
 
@@ -77,38 +79,29 @@ async def _process_event(event: dict, store: Store, access_token: str, liff_id: 
         msg = event.get("message", {})
         if msg.get("type") == "text":
             text = msg.get("text", "").strip()
+            line_user_id = event.get("source", {}).get("userId", "")
+
+            # 「予約」キーワードは従来通りLIFF誘導
             if "予約" in text:
                 liff_url = f"https://liff.line.me/{liff_id}?store_id={store.id}"
                 flex_msg = build_booking_flex_message(liff_url, store.name)
                 await reply_line_message(access_token, reply_token, [flex_msg])
             else:
-                await reply_line_message(
-                    access_token,
-                    reply_token,
-                    [{
-                        "type": "text",
-                        "text": "ご予約・確認はメニューからお選びください。",
-                        "quickReply": {
-                            "items": [
-                                {
-                                    "type": "action",
-                                    "action": {
-                                        "type": "uri",
-                                        "label": "予約する",
-                                        "uri": f"https://liff.line.me/{liff_id}?store_id={store.id}&action=book",
-                                    },
-                                },
-                                {
-                                    "type": "action",
-                                    "action": {
-                                        "type": "uri",
-                                        "label": "予約確認",
-                                        "uri": f"https://liff.line.me/{liff_id}?store_id={store.id}&action=list",
-                                    },
-                                },
-                            ]
-                        },
-                    }],
+                # 顧客DBから表示名を取得
+                customer = db.query(Customer).filter(
+                    Customer.store_id == store.id,
+                    Customer.line_user_id == line_user_id,
+                ).first()
+                display_name = customer.name if customer else ""
+
+                # FAQ botに委譲
+                await handle_faq_message(
+                    text=text,
+                    line_user_id=line_user_id,
+                    display_name=display_name,
+                    store=store,
+                    reply_token=reply_token,
+                    db=db,
                 )
 
     elif event_type == "postback":

@@ -42,6 +42,9 @@ class Settings(BaseSettings):
     liff_base_url: str = ""
     admin_base_url: str = ""
 
+    # AI
+    anthropic_api_key: str = ""
+
     # Scheduler
     scheduler_enabled: bool = True
 
