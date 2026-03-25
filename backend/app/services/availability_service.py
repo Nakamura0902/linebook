@@ -65,17 +65,23 @@ def get_available_slots(
             Staff.is_active == True,
         ).all()
     else:
-        # メニューに対応可能な全スタッフ
-        staff_ids = db.query(StaffMenuSettings.staff_id).filter(
-            StaffMenuSettings.menu_id == menu_id,
-            StaffMenuSettings.is_available == True,
-        ).subquery()
-        staff_list = db.query(Staff).filter(
+        # メニューに対応可能な全スタッフ（StaffMenuSettingsがあれば絞り込む）
+        menu_staff_ids = [
+            r.staff_id for r in db.query(StaffMenuSettings.staff_id).filter(
+                StaffMenuSettings.menu_id == menu_id,
+                StaffMenuSettings.is_available == True,
+            ).all()
+        ]
+        base_query = db.query(Staff).filter(
             Staff.store_id == store.id,
             Staff.is_active == True,
             Staff.is_assignable == True,
-            Staff.id.in_(staff_ids),
-        ).all()
+        )
+        if menu_staff_ids:
+            staff_list = base_query.filter(Staff.id.in_(menu_staff_ids)).all()
+        else:
+            # StaffMenuSettings未設定の場合は全アクティブスタッフを対象にする
+            staff_list = base_query.all()
 
     if not staff_list:
         return []

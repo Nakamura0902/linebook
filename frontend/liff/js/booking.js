@@ -33,13 +33,9 @@ window.addEventListener("DOMContentLoaded", async () => {
 
     // liff.init後にURLパラメータが確定してから判定
     const page = getPageParam();
+    const action = new URLSearchParams(location.search).get("action");
 
-    // DEBUG: 画面上部にパラメータを表示
-    const _d = document.createElement("div");
-    _d.style.cssText = "position:fixed;top:0;left:0;right:0;background:#333;color:#0f0;font-size:11px;padding:6px 8px;z-index:9999;word-break:break-all";
-    _d.textContent = "page=" + page + " | " + location.search.slice(0, 120);
-    document.body.appendChild(_d);
-    if (page === "my-reservations") {
+    if (page === "my-reservations" || action === "list") {
       await renderReservationsMode();
       return;
     }
