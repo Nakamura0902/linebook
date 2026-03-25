@@ -63,6 +63,18 @@
         localStorage.setItem("access_token", data.access_token);
         localStorage.setItem("admin_name", data.name);
         localStorage.setItem("admin_role", data.role);
+
+        // store_idを取得してlocalStorageに保存
+        const meRes = await fetch("/api/v1/admin/auth/me", {
+          headers: { "Authorization": "Bearer " + data.access_token },
+        });
+        if (meRes.ok) {
+          const me = await meRes.json();
+          if (me.store_ids && me.store_ids.length > 0) {
+            localStorage.setItem("current_store_id", me.store_ids[0]);
+          }
+        }
+
         location.href = "dashboard.html";
 
       } catch (err) {
