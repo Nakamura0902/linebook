@@ -9,8 +9,8 @@ body {
 }
 
 .liff-header {
-  background: linear-gradient(135deg, #1a0533 0%, #3d0066 50%, #c40074 100%) !important;
-  box-shadow: 0 2px 20px rgba(196,0,116,0.4) !important;
+  background: linear-gradient(135deg, #06c755 0%, #00b341 100%) !important;
+  box-shadow: 0 2px 12px rgba(6,199,85,0.3) !important;
 }
 
 .liff-body {
@@ -167,7 +167,7 @@ a.banner-slide {
 
 /* ─── ショップヘッダー（カテゴリ選択用） ─── */
 .shop-header {
-  background: linear-gradient(160deg, #1a0533 0%, #3d0066 40%, #c40074 100%);
+  background: linear-gradient(135deg, #06c755 0%, #00b341 100%);
   color: #fff;
   padding: 28px 20px 32px;
   text-align: center;
@@ -183,20 +183,8 @@ a.banner-slide {
   width: 200px;
   height: 200px;
   border-radius: 50%;
-  background: rgba(255,110,199,0.15);
+  background: rgba(255,255,255,0.1);
   filter: blur(30px);
-}
-
-.shop-header::after {
-  content: "";
-  position: absolute;
-  bottom: -40px;
-  left: -20px;
-  width: 150px;
-  height: 150px;
-  border-radius: 50%;
-  background: rgba(123,0,212,0.2);
-  filter: blur(25px);
 }
 
 .shop-header h2 {
