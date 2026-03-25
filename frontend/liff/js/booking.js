@@ -13,6 +13,7 @@ const state = {
   calendarYear: null,
   calendarMonth: null,
   availableDates: {},        // YYYY-MM-DD → slots[]
+  customerInfo: null,        // ステップ4で入力した顧客情報を保持
 };
 
 const TOTAL_STEPS = 5;
@@ -207,6 +208,17 @@ function updateProgressBar(activeStep) {
 function prevStep() { if (state.step > 1) renderStep(state.step - 1); }
 
 function nextStep() {
+  // ステップ4→5: フォーム値が消える前にstateへ保存
+  if (state.step === 4) {
+    state.customerInfo = {
+      name:    document.getElementById("i-name")?.value || "",
+      phone:   document.getElementById("i-phone")?.value || "",
+      email:   document.getElementById("i-email")?.value || "",
+      kana:    document.getElementById("i-kana")?.value || "",
+      notes:   document.getElementById("i-notes")?.value || "",
+      allergy: document.getElementById("i-allergy")?.value || "",
+    };
+  }
   if (state.step < TOTAL_STEPS) {
     renderStep(state.step + 1);
   } else {
@@ -479,8 +491,8 @@ function renderConfirmStep(container) {
   const menu = state.selectedMenu;
   const staff = state.selectedStaff;
   const slot = state.selectedSlot;
-  const name = document.getElementById("i-name")?.value || state.customer?.name;
-  const phone = document.getElementById("i-phone")?.value || state.customer?.phone;
+  const name = state.customerInfo?.name || state.customer?.name || "";
+  const phone = state.customerInfo?.phone || state.customer?.phone || "";
 
   container.innerHTML = `
     <p class="step-title">予約内容を確認してください</p>
@@ -510,12 +522,12 @@ async function submitReservation() {
   btn.disabled = true;
   btn.textContent = "送信中...";
 
-  const name = document.getElementById("i-name")?.value;
-  const phone = document.getElementById("i-phone")?.value;
-  const email = document.getElementById("i-email")?.value;
-  const kana = document.getElementById("i-kana")?.value;
-  const notes = document.getElementById("i-notes")?.value;
-  const allergy = document.getElementById("i-allergy")?.value;
+  const name    = state.customerInfo?.name    || document.getElementById("i-name")?.value;
+  const phone   = state.customerInfo?.phone   || document.getElementById("i-phone")?.value;
+  const email   = state.customerInfo?.email   || document.getElementById("i-email")?.value;
+  const kana    = state.customerInfo?.kana    || document.getElementById("i-kana")?.value;
+  const notes   = state.customerInfo?.notes   || document.getElementById("i-notes")?.value;
+  const allergy = state.customerInfo?.allergy || document.getElementById("i-allergy")?.value;
 
   try {
     const res = await liffApi.post(

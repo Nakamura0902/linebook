@@ -1,5 +1,7 @@
 from __future__ import annotations
 from datetime import datetime, date, timedelta, time, timezone
+
+JST = timezone(timedelta(hours=9))
 from typing import Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import and_, or_
@@ -86,13 +88,13 @@ def get_available_slots(
     if not staff_list:
         return []
 
-    # スロット生成（施術開始時刻の候補）
-    open_dt = datetime.combine(target_date, bh.open_time, tzinfo=timezone.utc)
-    close_dt = datetime.combine(target_date, bh.close_time, tzinfo=timezone.utc)
+    # スロット生成（施術開始時刻の候補）: 営業時間はJST基準で保存されている
+    open_dt = datetime.combine(target_date, bh.open_time).replace(tzinfo=JST)
+    close_dt = datetime.combine(target_date, bh.close_time).replace(tzinfo=JST)
 
     # 各スタッフの既存予約を取得
-    day_start = datetime.combine(target_date, time.min, tzinfo=timezone.utc)
-    day_end = datetime.combine(target_date, time.max, tzinfo=timezone.utc)
+    day_start = datetime.combine(target_date, time.min).replace(tzinfo=JST)
+    day_end = datetime.combine(target_date, time.max).replace(tzinfo=JST)
 
     existing_reservations = db.query(Reservation).filter(
         Reservation.store_id == store.id,
