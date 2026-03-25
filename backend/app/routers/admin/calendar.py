@@ -7,9 +7,11 @@ import re
 
 
 def _parse_dt(s: str) -> datetime:
-    """FullCalendar が送る ISO 文字列（Z付き含む）をパース → UTC aware datetime"""
-    s = re.sub(r"Z$", "+00:00", s)
-    # +HH:MM 形式がない場合はUTC naive として扱う
+    """FullCalendar が送る ISO 文字列をパース。
+    URLクエリの + → スペース変換、Z suffix、タイムゾーンなし、いずれも処理する。
+    """
+    s = s.replace(" ", "+")           # URL decode: + が空白に変わる場合を修正
+    s = re.sub(r"Z$", "+00:00", s)   # Z → +00:00
     dt = datetime.fromisoformat(s)
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)

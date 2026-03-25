@@ -258,17 +258,17 @@ body.sidebar-open .hamburger span:nth-child(3) {
     font-size: 17px;
   }
 
-  /* テーブルをカードスタイルへ変換 */
-  table thead {
+  /* テーブルをカードスタイルへ変換（.card内のデータテーブルのみ） */
+  .card table thead {
     display: none;
   }
 
-  table, table tbody, table tr, table td {
+  .card table, .card table tbody, .card table tr, .card table td {
     display: block;
     width: 100%;
   }
 
-  table tr {
+  .card table tr {
     background: #fff;
     border-radius: 10px;
     margin-bottom: 10px;
@@ -277,24 +277,56 @@ body.sidebar-open .hamburger span:nth-child(3) {
     position: relative;
   }
 
-  table td {
+  .card table td {
     padding: 4px 0;
     font-size: 13px;
     border: none;
   }
 
-  table td:first-child {
+  .card table td:first-child {
     font-weight: 600;
     font-size: 14px;
     margin-bottom: 4px;
   }
 
-  table td[style*="display:flex"],
-  table td[style*="display: flex"] {
+  .card table td[style*="display:flex"],
+  .card table td[style*="display: flex"] {
     display: flex !important;
     flex-wrap: wrap;
     gap: 6px;
     margin-top: 8px;
+  }
+
+  /* FullCalendarのテーブルはカード変換から除外 */
+  .fc table, .fc table thead, .fc table tbody,
+  .fc table tr, .fc table td, .fc table th {
+    display: revert;
+    width: revert;
+    background: revert;
+    border-radius: 0;
+    padding: revert;
+    box-shadow: none;
+    font-size: revert;
+    border: revert;
+  }
+
+  /* カレンダーはスクロール可能に */
+  #calendar {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* 設定タブは横スクロール */
+  .tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 2px;
+  }
+
+  .tab {
+    white-space: nowrap;
+    flex-shrink: 0;
   }
 
   /* モーダルを全画面に */
