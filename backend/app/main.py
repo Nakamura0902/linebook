@@ -23,6 +23,9 @@ from .routers.admin.staff import router as admin_staff_router
 from .routers.admin.menus import router as admin_menus_router
 from .routers.admin.settings import router as admin_settings_router
 from .routers.admin.calendar import router as admin_calendar_router
+from .routers.admin.shop import router as admin_shop_router
+from .routers.liff.shop import router as liff_shop_router
+from .models import shop as _shop_models  # noqa: ensure tables are created
 
 
 @asynccontextmanager
@@ -122,6 +125,8 @@ app.include_router(admin_staff_router, prefix=PREFIX)
 app.include_router(admin_menus_router, prefix=PREFIX)
 app.include_router(admin_settings_router, prefix=PREFIX)
 app.include_router(admin_calendar_router, prefix=PREFIX)
+app.include_router(admin_shop_router, prefix=PREFIX)
+app.include_router(liff_shop_router, prefix=PREFIX)
 
 
 @app.get("/health")

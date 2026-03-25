@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ショップ管理 - LINE予約管理</title>
+  <link rel="stylesheet" href="../shared/css/base.css?v=3">
+  <link rel="stylesheet" href="css/admin.css?v=4">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">LINE予約管理</div>
+      <nav class="sidebar-nav">
+        <a href="dashboard.html">ダッシュボード</a>
+        <a href="reservations.html">予約一覧</a>
+        <a href="calendar.html">カレンダー</a>
+        <a href="customers.html">顧客管理</a>
+        <a href="staff.html">スタッフ管理</a>
+        <a href="menus.html">メニュー管理</a>
+        <a href="shop.html" class="active">ショップ</a>
+        <a href="settings.html">設定</a>
+      </nav>
+      <div class="sidebar-footer">
+        <span id="admin-name"></span>
+        <button class="btn btn-sm btn-outline" onclick="logout()">ログアウト</button>
+      </div>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <h1>ショップ管理</h1>
+        <div class="page-actions">
+          <button class="btn btn-secondary" onclick="openCatModal()">カテゴリ追加</button>
+          <button class="btn btn-primary" onclick="openAddModal()">＋ 商品追加</button>
+        </div>
+      </div>
+
+      <!-- カテゴリフィルター -->
+      <div class="filter-bar" style="margin-bottom:16px">
+        <div class="form-group" style="margin-bottom:0;flex:1;min-width:120px">
+          <select id="filter-cat" onchange="loadProducts()">
+            <option value="">すべてのカテゴリ</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="card">
+        <div id="products-table"><div class="loading">読み込み中...</div></div>
+      </div>
+    </main>
+  </div>
+
+  <!-- 商品モーダル -->
+  <div class="modal-overlay" id="product-modal" style="display:none">
+    <div class="modal">
+      <div class="modal-header">
+        <h3 id="modal-title">商品追加</h3>
+        <button class="modal-close" onclick="closeModal('product-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="edit-id">
+        <div class="form-group">
+          <label>商品名 <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="f-name" placeholder="サロン専売シャンプー">
+        </div>
+        <div class="form-group">
+          <label>カテゴリ</label>
+          <select id="f-category"></select>
+        </div>
+        <div class="form-group">
+          <label>価格（円）</label>
+          <input type="number" id="f-price" min="0" step="100" placeholder="3800">
+        </div>
+        <div class="form-group">
+          <label>外部EC URL <span style="color:var(--danger)">*</span></label>
+          <input type="url" id="f-url" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label>ECプラットフォーム</label>
+          <select id="f-platform">
+            <option value="">その他</option>
+            <option value="base">BASE</option>
+            <option value="gumroad">Gumroad</option>
+            <option value="note">note</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>商品画像URL</label>
+          <input type="url" id="f-image" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label>短い説明（カルーセル用）</label>
+          <input type="text" id="f-desc" placeholder="サロン専売・頭皮ケアに最適" maxlength="100">
+        </div>
+        <div class="form-group">
+          <label>スタッフコメント（接客ページ用）</label>
+          <textarea id="f-comment" rows="3" placeholder="このシャンプーは..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('product-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveProduct()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- カテゴリモーダル -->
+  <div class="modal-overlay" id="cat-modal" style="display:none">
+    <div class="modal" style="max-width:400px">
+      <div class="modal-header">
+        <h3>カテゴリ追加</h3>
+        <button class="modal-close" onclick="closeModal('cat-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>絵文字</label>
+          <input type="text" id="cat-emoji" placeholder="💇" maxlength="4" style="width:80px">
+        </div>
+        <div class="form-group">
+          <label>カテゴリ名 <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="cat-name" placeholder="ヘアケア">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('cat-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveCategory()">追加</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/api.js?v=3"></script>
+  <script src="js/admin-layout.js?v=3"></script>
+  <script>
+    const storeId = getStoreId();
+    let categories = [];
+
+    async function loadAll() {
+      categories = await api.get(`/admin/stores/${storeId}/shop/categories`);
+      fillCategoryFilter();
+      fillCategorySelect("");
+      await loadProducts();
+    }
+
+    function fillCategoryFilter() {
+      const sel = document.getElementById("filter-cat");
+      sel.innerHTML = '<option value="">すべてのカテゴリ</option>' +
+        categories.map(c => `<option value="${c.id}">${c.emoji || ""} ${c.name}</option>`).join("");
+    }
+
+    function fillCategorySelect(selectedId) {
+      const sel = document.getElementById("f-category");
+      sel.innerHTML = '<option value="">未分類</option>' +
+        categories.map(c =>
+          `<option value="${c.id}" ${c.id === selectedId ? "selected" : ""}>${c.emoji || ""} ${c.name}</option>`
+        ).join("");
+    }
+
+    async function loadProducts() {
+      const catId = document.getElementById("filter-cat").value;
+      const products = await api.get(
+        `/admin/stores/${storeId}/shop/products${catId ? "?category_id=" + catId : ""}`
+      );
+      const el = document.getElementById("products-table");
+      if (!products.length) {
+        el.innerHTML = '<div class="empty-state">商品が登録されていません</div>';
+        return;
+      }
+      el.innerHTML = `
+        <table>
+          <thead><tr><th>商品名</th><th>カテゴリ</th><th>価格</th><th>EC</th><th>クリック</th><th>状態</th><th></th></tr></thead>
+          <tbody>
+            ${products.map(p => `
+              <tr style="${!p.is_active ? 'opacity:0.5' : ''}">
+                <td>
+                  <strong>${p.name}</strong>
+                  ${p.description ? `<br><small style="color:var(--gray-500)">${p.description}</small>` : ""}
+                </td>
+                <td>${p.category_name || "-"}</td>
+                <td>${p.price != null ? "¥" + p.price.toLocaleString() : "-"}</td>
+                <td>${p.ec_platform ? `<span class="badge badge-confirmed">${p.ec_platform}</span>` : "-"}</td>
+                <td>${p.click_count}</td>
+                <td><span class="badge ${p.is_active ? 'badge-confirmed' : 'badge-cancelled'}">${p.is_active ? "有効" : "無効"}</span></td>
+                <td style="display:flex;gap:6px">
+                  <button class="btn btn-sm btn-outline" onclick='openEditModal(${JSON.stringify(p)})'>編集</button>
+                  <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="toggleActive('${p.id}', ${p.is_active})">${p.is_active ? "無効化" : "有効化"}</button>
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function openAddModal() {
+      document.getElementById("modal-title").textContent = "商品追加";
+      document.getElementById("edit-id").value = "";
+      ["f-name","f-price","f-url","f-image","f-desc","f-comment"].forEach(id =>
+        document.getElementById(id).value = ""
+      );
+      document.getElementById("f-platform").value = "";
+      fillCategorySelect("");
+      openModal("product-modal");
+    }
+
+    function openEditModal(p) {
+      document.getElementById("modal-title").textContent = "商品編集";
+      document.getElementById("edit-id").value = p.id;
+      document.getElementById("f-name").value = p.name || "";
+      document.getElementById("f-price").value = p.price != null ? p.price : "";
+      document.getElementById("f-url").value = p.external_url || "";
+      document.getElementById("f-platform").value = p.ec_platform || "";
+      document.getElementById("f-image").value = p.image_url || "";
+      document.getElementById("f-desc").value = p.description || "";
+      document.getElementById("f-comment").value = p.staff_comment || "";
+      fillCategorySelect(p.category_id);
+      openModal("product-modal");
+    }
+
+    async function saveProduct() {
+      const id = document.getElementById("edit-id").value;
+      const price = document.getElementById("f-price").value;
+      const body = {
+        name: document.getElementById("f-name").value.trim(),
+        category_id: document.getElementById("f-category").value || null,
+        price: price !== "" ? parseInt(price) : null,
+        external_url: document.getElementById("f-url").value.trim(),
+        ec_platform: document.getElementById("f-platform").value || null,
+        image_url: document.getElementById("f-image").value.trim() || null,
+        description: document.getElementById("f-desc").value.trim() || null,
+        staff_comment: document.getElementById("f-comment").value.trim() || null,
+      };
+      if (!body.name) { alert("商品名を入力してください"); return; }
+      if (!body.external_url) { alert("外部EC URLを入力してください"); return; }
+      try {
+        if (id) {
+          await api.put(`/admin/stores/${storeId}/shop/products/${id}`, body);
+        } else {
+          await api.post(`/admin/stores/${storeId}/shop/products`, body);
+        }
+        closeModal("product-modal");
+        showToast("保存しました");
+        loadProducts();
+      } catch(e) { showToast(e.message, "error"); }
+    }
+
+    async function toggleActive(id, current) {
+      try {
+        await api.put(`/admin/stores/${storeId}/shop/products/${id}`, { is_active: !current });
+        showToast(current ? "無効化しました" : "有効化しました");
+        loadProducts();
+      } catch(e) { showToast(e.message, "error"); }
+    }
+
+    function openCatModal() {
+      document.getElementById("cat-name").value = "";
+      document.getElementById("cat-emoji").value = "";
+      openModal("cat-modal");
+    }
+
+    async function saveCategory() {
+      const name = document.getElementById("cat-name").value.trim();
+      if (!name) { alert("カテゴリ名を入力してください"); return; }
+      try {
+        await api.post(`/admin/stores/${storeId}/shop/categories`, {
+          name,
+          emoji: document.getElementById("cat-emoji").value.trim() || null,
+        });
+        closeModal("cat-modal");
+        showToast("カテゴリを追加しました");
+        loadAll();
+      } catch(e) { showToast(e.message, "error"); }
+    }
+
+    loadAll().catch(e => showToast(e.message, "error"));
+  </script>
+</body>
+</html>
