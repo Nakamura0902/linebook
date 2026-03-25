@@ -30,8 +30,16 @@ async def lifespan(app: FastAPI):
     setup_logging(debug=settings.debug)
     logger.info("Starting linebook API", extra={"env": settings.app_env})
 
-    # テーブルを自動作成
-    Base.metadata.create_all(bind=engine)
+    # テーブルを自動作成（PostgreSQLスリープからの復帰に備えリトライ）
+    import time
+    for attempt in range(3):
+        try:
+            Base.metadata.create_all(bind=engine)
+            break
+        except Exception as e:
+            logger.warning(f"DB connect attempt {attempt+1} failed: {e}")
+            if attempt < 2:
+                time.sleep(5)
 
     # 初期データが空ならseedを実行
     try:
