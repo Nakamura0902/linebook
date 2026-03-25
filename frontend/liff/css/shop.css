@@ -1,3 +1,104 @@
+/* ─── バナーカルーセル ─── */
+.banner-carousel {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  background: #f8f9fa;
+}
+
+.banner-track {
+  display: flex;
+  width: 100%;
+}
+
+.banner-slide {
+  flex-shrink: 0;
+  width: 100%;
+  min-height: 140px;
+  display: none;
+  position: relative;
+  overflow: hidden;
+  text-decoration: none;
+  cursor: default;
+}
+
+.banner-slide.active {
+  display: flex;
+  align-items: center;
+}
+
+a.banner-slide {
+  cursor: pointer;
+}
+
+.banner-img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.35;
+}
+
+.banner-body {
+  position: relative;
+  padding: 20px 20px;
+  z-index: 1;
+}
+
+.banner-badge {
+  display: inline-block;
+  background: rgba(255,255,255,0.3);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 20px;
+  margin-bottom: 6px;
+}
+
+.banner-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.3;
+  text-shadow: 0 1px 4px rgba(0,0,0,0.2);
+}
+
+.banner-subtitle {
+  font-size: 13px;
+  color: rgba(255,255,255,0.88);
+  margin-top: 4px;
+  text-shadow: 0 1px 3px rgba(0,0,0,0.15);
+}
+
+.banner-dots {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 0 6px;
+  background: transparent;
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+}
+
+.banner-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.5);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.banner-dot.active {
+  background: #fff;
+}
+
 /* ─── ショップ共通 ─── */
 .shop-header {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);

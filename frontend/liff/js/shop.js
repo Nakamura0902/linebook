@@ -10,6 +10,7 @@ const shopState = {
   storeId: null,
   customer: null,
   categories: [],
+  banners: [],
   selectedCategoryIds: [],   // カテゴリ選択画面で選んだもの
   activeCategoryId: null,    // 商品一覧のフィルター
   mode: "select",            // "select" | "list" | "detail"
@@ -30,10 +31,11 @@ window.addEventListener("DOMContentLoaded", async () => {
     );
     shopState.customer = customerData.customer;
 
-    // カテゴリ取得
-    shopState.categories = await liffApi.get(
-      `/liff/stores/${shopState.storeId}/shop/categories`
-    );
+    // バナーとカテゴリを並行取得
+    [shopState.banners, shopState.categories] = await Promise.all([
+      liffApi.get(`/liff/stores/${shopState.storeId}/shop/banners`),
+      liffApi.get(`/liff/stores/${shopState.storeId}/shop/categories`),
+    ]);
 
     // URLで商品詳細直リンクの場合
     const productId = new URLSearchParams(location.search).get("product_id");
@@ -70,6 +72,59 @@ window.addEventListener("DOMContentLoaded", async () => {
     document.getElementById("loading-overlay").style.display = "none";
   }
 });
+
+// ─── バナーカルーセル ───
+
+function renderBannerCarousel() {
+  if (!shopState.banners.length) return "";
+  return `
+    <div class="banner-carousel">
+      <div class="banner-track" id="banner-track">
+        ${shopState.banners.map((b, i) => {
+          const bg = b.bg_color || "linear-gradient(135deg,#f093fb,#f5576c)";
+          const hasLink = !!b.link_url;
+          const tag = hasLink ? `a href="${escapeHtml(b.link_url)}" target="_blank"` : "div";
+          const closeTag = hasLink ? "a" : "div";
+          return `
+            <${tag} class="banner-slide${i === 0 ? " active" : ""}" style="background:${escapeHtml(bg)}">
+              ${b.image_url ? `<img class="banner-img" src="${escapeHtml(b.image_url)}" alt="${escapeHtml(b.title)}">` : ""}
+              <div class="banner-body">
+                ${b.badge_text ? `<span class="banner-badge">${escapeHtml(b.badge_text)}</span>` : ""}
+                <div class="banner-title">${escapeHtml(b.title)}</div>
+                ${b.subtitle ? `<div class="banner-subtitle">${escapeHtml(b.subtitle)}</div>` : ""}
+              </div>
+            </${closeTag}>
+          `;
+        }).join("")}
+      </div>
+      ${shopState.banners.length > 1 ? `
+        <div class="banner-dots">
+          ${shopState.banners.map((_, i) => `<span class="banner-dot${i === 0 ? " active" : ""}" onclick="goToBanner(${i})"></span>`).join("")}
+        </div>
+      ` : ""}
+    </div>
+  `;
+}
+
+let _bannerIndex = 0;
+let _bannerTimer = null;
+
+function goToBanner(idx) {
+  const slides = document.querySelectorAll(".banner-slide");
+  const dots = document.querySelectorAll(".banner-dot");
+  if (!slides.length) return;
+  slides[_bannerIndex]?.classList.remove("active");
+  dots[_bannerIndex]?.classList.remove("active");
+  _bannerIndex = (idx + slides.length) % slides.length;
+  slides[_bannerIndex]?.classList.add("active");
+  dots[_bannerIndex]?.classList.add("active");
+}
+
+function startBannerAuto() {
+  if (shopState.banners.length <= 1) return;
+  clearInterval(_bannerTimer);
+  _bannerTimer = setInterval(() => goToBanner(_bannerIndex + 1), 4000);
+}
 
 // ─── カテゴリ選択画面 ───
 
@@ -151,7 +206,8 @@ async function renderProductList() {
     </div>
   `;
 
-  content.innerHTML = tabsHtml + '<div id="products-area"><div class="loading">読み込み中...</div></div>';
+  content.innerHTML = renderBannerCarousel() + tabsHtml + '<div id="products-area"><div class="loading">読み込み中...</div></div>';
+  startBannerAuto();
 
   await loadProducts();
 }

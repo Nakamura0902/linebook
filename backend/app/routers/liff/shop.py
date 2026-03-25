@@ -3,13 +3,33 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from ...database import get_db
-from ...models.shop import ShopCategory, ShopProduct, CustomerInterest
+from ...models.shop import ShopCategory, ShopProduct, CustomerInterest, ShopBanner
 from ...models.customer import Customer
 from ...core.auth import get_line_user_id
 from ...core.exceptions import NotFoundError
 from ...schemas.shop import CustomerInterestSave
 
 router = APIRouter(prefix="/liff", tags=["liff-shop"])
+
+
+@router.get("/stores/{store_id}/shop/banners")
+async def get_shop_banners(store_id: str, db: Session = Depends(get_db)):
+    banners = db.query(ShopBanner).filter(
+        ShopBanner.store_id == store_id,
+        ShopBanner.is_active == True,
+    ).order_by(ShopBanner.sort_order, ShopBanner.created_at).all()
+    return [
+        {
+            "id": b.id,
+            "title": b.title,
+            "subtitle": b.subtitle,
+            "badge_text": b.badge_text,
+            "image_url": b.image_url,
+            "link_url": b.link_url,
+            "bg_color": b.bg_color,
+        }
+        for b in banners
+    ]
 
 
 @router.get("/stores/{store_id}/shop/categories")

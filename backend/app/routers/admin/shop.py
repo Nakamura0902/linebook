@@ -4,10 +4,10 @@ from sqlalchemy.orm import Session
 
 from ...database import get_db
 from ...models.admin import AdminUser
-from ...models.shop import ShopCategory, ShopProduct
+from ...models.shop import ShopCategory, ShopProduct, ShopBanner
 from ...core.auth import get_current_admin, require_store_access
 from ...core.exceptions import NotFoundError
-from ...schemas.shop import ShopCategoryCreate, ShopProductCreate, ShopProductUpdate
+from ...schemas.shop import ShopCategoryCreate, ShopProductCreate, ShopProductUpdate, ShopBannerCreate, ShopBannerUpdate
 
 router = APIRouter(prefix="/admin", tags=["admin-shop"])
 
@@ -125,6 +125,88 @@ async def delete_product(
         raise NotFoundError("ShopProduct", product_id)
     db.delete(p)
     db.commit()
+
+
+# ─── バナー ───
+
+@router.get("/stores/{store_id}/shop/banners")
+async def list_banners(
+    store_id: str,
+    admin: AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    require_store_access(store_id, admin, db)
+    banners = db.query(ShopBanner).filter(
+        ShopBanner.store_id == store_id,
+    ).order_by(ShopBanner.sort_order, ShopBanner.created_at).all()
+    return [_banner_dict(b) for b in banners]
+
+
+@router.post("/stores/{store_id}/shop/banners", status_code=201)
+async def create_banner(
+    store_id: str,
+    req: ShopBannerCreate,
+    admin: AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    require_store_access(store_id, admin, db)
+    b = ShopBanner(store_id=store_id, **req.model_dump())
+    db.add(b)
+    db.commit()
+    db.refresh(b)
+    return _banner_dict(b)
+
+
+@router.put("/stores/{store_id}/shop/banners/{banner_id}")
+async def update_banner(
+    store_id: str,
+    banner_id: str,
+    req: ShopBannerUpdate,
+    admin: AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    require_store_access(store_id, admin, db)
+    b = db.query(ShopBanner).filter(
+        ShopBanner.id == banner_id, ShopBanner.store_id == store_id
+    ).first()
+    if not b:
+        raise NotFoundError("ShopBanner", banner_id)
+    for k, v in req.model_dump(exclude_unset=True).items():
+        setattr(b, k, v)
+    db.commit()
+    db.refresh(b)
+    return _banner_dict(b)
+
+
+@router.delete("/stores/{store_id}/shop/banners/{banner_id}", status_code=204)
+async def delete_banner(
+    store_id: str,
+    banner_id: str,
+    admin: AdminUser = Depends(get_current_admin),
+    db: Session = Depends(get_db),
+):
+    require_store_access(store_id, admin, db)
+    b = db.query(ShopBanner).filter(
+        ShopBanner.id == banner_id, ShopBanner.store_id == store_id
+    ).first()
+    if not b:
+        raise NotFoundError("ShopBanner", banner_id)
+    db.delete(b)
+    db.commit()
+
+
+def _banner_dict(b: ShopBanner) -> dict:
+    return {
+        "id": b.id,
+        "title": b.title,
+        "subtitle": b.subtitle,
+        "badge_text": b.badge_text,
+        "image_url": b.image_url,
+        "link_url": b.link_url,
+        "bg_color": b.bg_color,
+        "is_active": b.is_active,
+        "sort_order": b.sort_order,
+    }
 
 
 def _product_dict(p: ShopProduct) -> dict:

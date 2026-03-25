@@ -48,6 +48,17 @@
       <div class="card">
         <div id="products-table"><div class="loading">読み込み中...</div></div>
       </div>
+
+      <!-- バナー管理 -->
+      <div class="page-header" style="margin-top:32px">
+        <h2 style="font-size:18px;font-weight:700">バナー管理</h2>
+        <div class="page-actions">
+          <button class="btn btn-secondary" onclick="openBannerModal()">＋ バナー追加</button>
+        </div>
+      </div>
+      <div class="card">
+        <div id="banners-table"><div class="loading">読み込み中...</div></div>
+      </div>
     </main>
   </div>
 
@@ -125,6 +136,47 @@
       <div class="modal-footer">
         <button class="btn btn-secondary" onclick="closeModal('cat-modal')">キャンセル</button>
         <button class="btn btn-primary" onclick="saveCategory()">追加</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- バナーモーダル -->
+  <div class="modal-overlay" id="banner-modal" style="display:none">
+    <div class="modal" style="max-width:460px">
+      <div class="modal-header">
+        <h3 id="banner-modal-title">バナー追加</h3>
+        <button class="modal-close" onclick="closeModal('banner-modal')">×</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="banner-edit-id">
+        <div class="form-group">
+          <label>タイトル <span style="color:var(--danger)">*</span></label>
+          <input type="text" id="b-title" placeholder="新商品入荷！" maxlength="100">
+        </div>
+        <div class="form-group">
+          <label>サブタイトル</label>
+          <input type="text" id="b-subtitle" placeholder="今だけ送料無料" maxlength="200">
+        </div>
+        <div class="form-group">
+          <label>バッジテキスト</label>
+          <input type="text" id="b-badge" placeholder="NEW / SALE / イベント" maxlength="20" style="width:160px">
+        </div>
+        <div class="form-group">
+          <label>バナー画像URL</label>
+          <input type="url" id="b-image" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label>リンクURL（商品ページ or 外部URL）</label>
+          <input type="url" id="b-link" placeholder="https://...">
+        </div>
+        <div class="form-group">
+          <label>背景色（CSSグラデーション or カラーコード）</label>
+          <input type="text" id="b-bg" placeholder="linear-gradient(135deg,#f093fb,#f5576c)" maxlength="50">
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" onclick="closeModal('banner-modal')">キャンセル</button>
+        <button class="btn btn-primary" onclick="saveBanner()">保存</button>
       </div>
     </div>
   </div>
@@ -272,7 +324,102 @@
       } catch(e) { showToast(e.message, "error"); }
     }
 
+    // ─── バナー ───
+
+    async function loadBanners() {
+      const banners = await api.get(`/admin/stores/${storeId}/shop/banners`);
+      const el = document.getElementById("banners-table");
+      if (!banners.length) {
+        el.innerHTML = '<div class="empty-state">バナーが登録されていません</div>';
+        return;
+      }
+      el.innerHTML = `
+        <table>
+          <thead><tr><th>タイトル</th><th>バッジ</th><th>状態</th><th></th></tr></thead>
+          <tbody>
+            ${banners.map(b => `
+              <tr style="${!b.is_active ? 'opacity:0.5' : ''}">
+                <td>
+                  <strong>${b.title}</strong>
+                  ${b.subtitle ? `<br><small style="color:var(--gray-500)">${b.subtitle}</small>` : ""}
+                </td>
+                <td>${b.badge_text ? `<span class="badge badge-confirmed">${b.badge_text}</span>` : "-"}</td>
+                <td><span class="badge ${b.is_active ? 'badge-confirmed' : 'badge-cancelled'}">${b.is_active ? "有効" : "無効"}</span></td>
+                <td style="display:flex;gap:6px">
+                  <button class="btn btn-sm btn-outline" onclick='openBannerEditModal(${JSON.stringify(b)})'>編集</button>
+                  <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="toggleBanner('${b.id}', ${b.is_active})">${b.is_active ? "無効化" : "有効化"}</button>
+                  <button class="btn btn-sm btn-outline" style="color:var(--danger)" onclick="deleteBanner('${b.id}')">削除</button>
+                </td>
+              </tr>
+            `).join("")}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function openBannerModal() {
+      document.getElementById("banner-modal-title").textContent = "バナー追加";
+      document.getElementById("banner-edit-id").value = "";
+      ["b-title","b-subtitle","b-badge","b-image","b-link","b-bg"].forEach(id =>
+        document.getElementById(id).value = ""
+      );
+      openModal("banner-modal");
+    }
+
+    function openBannerEditModal(b) {
+      document.getElementById("banner-modal-title").textContent = "バナー編集";
+      document.getElementById("banner-edit-id").value = b.id;
+      document.getElementById("b-title").value = b.title || "";
+      document.getElementById("b-subtitle").value = b.subtitle || "";
+      document.getElementById("b-badge").value = b.badge_text || "";
+      document.getElementById("b-image").value = b.image_url || "";
+      document.getElementById("b-link").value = b.link_url || "";
+      document.getElementById("b-bg").value = b.bg_color || "";
+      openModal("banner-modal");
+    }
+
+    async function saveBanner() {
+      const id = document.getElementById("banner-edit-id").value;
+      const body = {
+        title: document.getElementById("b-title").value.trim(),
+        subtitle: document.getElementById("b-subtitle").value.trim() || null,
+        badge_text: document.getElementById("b-badge").value.trim() || null,
+        image_url: document.getElementById("b-image").value.trim() || null,
+        link_url: document.getElementById("b-link").value.trim() || null,
+        bg_color: document.getElementById("b-bg").value.trim() || null,
+      };
+      if (!body.title) { alert("タイトルを入力してください"); return; }
+      try {
+        if (id) {
+          await api.put(`/admin/stores/${storeId}/shop/banners/${id}`, body);
+        } else {
+          await api.post(`/admin/stores/${storeId}/shop/banners`, body);
+        }
+        closeModal("banner-modal");
+        showToast("保存しました");
+        loadBanners();
+      } catch(e) { showToast(e.message, "error"); }
+    }
+
+    async function toggleBanner(id, current) {
+      try {
+        await api.put(`/admin/stores/${storeId}/shop/banners/${id}`, { is_active: !current });
+        showToast(current ? "無効化しました" : "有効化しました");
+        loadBanners();
+      } catch(e) { showToast(e.message, "error"); }
+    }
+
+    async function deleteBanner(id) {
+      if (!confirm("このバナーを削除しますか？")) return;
+      try {
+        await api.delete(`/admin/stores/${storeId}/shop/banners/${id}`);
+        showToast("削除しました");
+        loadBanners();
+      } catch(e) { showToast(e.message, "error"); }
+    }
+
     loadAll().catch(e => showToast(e.message, "error"));
+    loadBanners().catch(e => showToast(e.message, "error"));
   </script>
 </body>
 </html>

@@ -44,6 +44,22 @@ class ShopProduct(Base):
     category: Mapped[Optional["ShopCategory"]] = relationship("ShopCategory", back_populates="products")
 
 
+class ShopBanner(Base):
+    __tablename__ = "shop_banners"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=lambda: __import__("uuid").uuid4().hex)
+    store_id: Mapped[str] = mapped_column(String(36), ForeignKey("stores.id", ondelete="CASCADE"), nullable=False)
+    badge_text: Mapped[Optional[str]] = mapped_column(String(20))        # "NEW" "SALE" "イベント" etc
+    title: Mapped[str] = mapped_column(String(100), nullable=False)
+    subtitle: Mapped[Optional[str]] = mapped_column(String(200))
+    image_url: Mapped[Optional[str]] = mapped_column(String(500))
+    link_url: Mapped[Optional[str]] = mapped_column(String(500))         # 商品詳細または外部URL
+    bg_color: Mapped[Optional[str]] = mapped_column(String(50))          # CSS gradient or hex
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    sort_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class CustomerInterest(Base):
     __tablename__ = "customer_interests"
 

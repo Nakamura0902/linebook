@@ -64,3 +64,38 @@ class ShopProductResponse(BaseModel):
 
 class CustomerInterestSave(BaseModel):
     category_ids: list[str]
+
+
+class ShopBannerCreate(BaseModel):
+    title: str
+    subtitle: Optional[str] = None
+    badge_text: Optional[str] = None
+    image_url: Optional[str] = None
+    link_url: Optional[str] = None
+    bg_color: Optional[str] = None
+    sort_order: int = 0
+
+
+class ShopBannerUpdate(BaseModel):
+    title: Optional[str] = None
+    subtitle: Optional[str] = None
+    badge_text: Optional[str] = None
+    image_url: Optional[str] = None
+    link_url: Optional[str] = None
+    bg_color: Optional[str] = None
+    is_active: Optional[bool] = None
+    sort_order: Optional[int] = None
+
+
+class ShopBannerResponse(BaseModel):
+    id: str
+    title: str
+    subtitle: Optional[str] = None
+    badge_text: Optional[str] = None
+    image_url: Optional[str] = None
+    link_url: Optional[str] = None
+    bg_color: Optional[str] = None
+    is_active: bool
+    sort_order: int
+
+    model_config = {"from_attributes": True}
