@@ -35,6 +35,12 @@ window.addEventListener("DOMContentLoaded", async () => {
       return;
     }
 
+    // カテゴリがない場合は直接商品一覧へ
+    if (shopState.categories.length === 0) {
+      await renderProductList();
+      return;
+    }
+
     // 既存の興味設定があるか確認
     if (shopState.customer) {
       const interests = await liffApi.get(
